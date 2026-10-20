@@ -6,7 +6,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#05060f">
-<meta name="manifest" href="data:application/json,{%22name%22:%22%C3%86thera%22,%22short_name%22:%22%C3%86thera%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%2305060f%22,%22theme_color%22:%22%2305060f%22,%22icons%22:[{%22src%22:%22data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 192 192%27%3E%3Crect width=%27192%27 height=%27192%27 fill=%27%2305060f%27/%3E%3Ctext x=%2796%27 y=%27115%27 font-size=%2796%27 fill=%27%2372f7ff%27 text-anchor=%27middle%27 font-family=%27serif%27%3E%C3%86%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22192x192%22,%22type%22:%22image/svg+xml%22}]}">
 <title>ÆTHERA — Adventurer of the Seasons</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Inter:wght@400;500;700&display=swap');
@@ -70,6 +69,9 @@ body {
 .pill.season .dot { background: var(--gold); box-shadow: 0 0 10px var(--gold); }
 .pill.timer { border-color: rgba(114, 247, 255, 0.35); }
 .pill.timer b { color: #a0f0ff; font-variant-numeric: tabular-nums; }
+.pill.checkpoint { border-color: rgba(160, 255, 176, 0.6); }
+.pill.checkpoint b { color: #a0ffb0; }
+.pill.checkpoint .dot { background: #a0ffb0; box-shadow: 0 0 10px #a0ffb0; }
 .pill.invincible { border-color: rgba(160, 240, 255, 0.8); box-shadow: 0 0 20px rgba(160, 240, 255, 0.4); }
 .pill.invincible b { color: #a0f0ff; }
 .pill.invincible .dot { background: #a0f0ff; box-shadow: 0 0 12px #a0f0ff; animation: pulseGlow 0.6s infinite; }
@@ -92,6 +94,16 @@ body {
 .progress-track { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; position: relative; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--gold)); width: 0%; border-radius: 2px; transition: width 0.1s linear; box-shadow: 0 0 12px var(--cyan); }
 .progress-marker { position: absolute; top: -3px; width: 10px; height: 10px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px var(--gold); transform: translateX(-50%); transition: left 0.1s linear; }
+.checkpoint-mark {
+  position: absolute; top: -4px; width: 12px; height: 12px;
+  border: 2px solid #a0ffb0; border-radius: 50%;
+  background: transparent; transform: translateX(-50%);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.checkpoint-mark.passed {
+  background: #a0ffb0;
+  box-shadow: 0 0 10px #a0ffb0;
+}
 
 .controls {
   position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 10;
@@ -331,11 +343,12 @@ body {
     <div class="pill danger"><span class="dot"></span> LIVES <b id="hudLives">♥♥♥</b></div>
     <div class="pill season"><span class="dot"></span> REALM <b id="hudSeason">SPRING</b></div>
     <div class="pill timer"><span class="dot"></span> TIME <b id="hudTimer">0:00</b></div>
+    <div class="pill checkpoint" id="cpPill" style="display:none;"><span class="dot"></span> CHECKPOINT <b id="cpState">✓</b></div>
     <div class="pill invincible" id="invPill" style="display:none;"><span class="dot"></span> FLIGHT <b id="invTimer">0s</b></div>
   </div>
   <div class="hud-right">
     <div class="weather-label"><span class="weather-icon" id="weatherIcon">☀</span> <span id="weatherState">CLEAR</span></div>
-    <div class="weather-sub" id="seasonSub">LEVEL 1 / 9</div>
+    <div class="weather-sub" id="seasonSub">LEVEL 1 / 12</div>
   </div>
 </div>
 
@@ -345,6 +358,7 @@ body {
   <div class="progress-track">
     <div class="progress-fill" id="progressFill"></div>
     <div class="progress-marker" id="progressMarker" style="left:0%"></div>
+    <div class="checkpoint-mark" id="checkpointMark" style="left:50%"></div>
   </div>
 </div>
 
@@ -372,7 +386,7 @@ body {
   <div class="overlay-inner">
     <h1>ÆTHERA</h1>
     <div class="sub">ADVENTURER OF THE SEASONS</div>
-    <p>Eight realms. Four seasons. A final threshold. And a thousand ways to die. The world hides its dangers — rocks that fall from nowhere, floors that vanish, darts that hunt you, spikes that erupt beneath your feet. Grab the <b style="color:#a0f0ff">Shield Gem</b> to fly above it all, and when it fades you become <b style="color:#ffe1a0">immune to falling</b>. Trust nothing.</p>
+    <p>Twelve realms. Four seasons. Four corrupted guardians. Checkpoints guard your progress — step into their light to save your place. The gem grants flight and immunity, but only while shielded can you wound a guardian. Trust nothing.</p>
     <button id="startBtn">BEGIN THE JOURNEY</button>
   </div>
 </div>
@@ -404,7 +418,7 @@ body {
   <div class="overlay-inner">
     <h1>ÆTHERA LIVES</h1>
     <div class="sub">THE CYCLE IS RESTORED</div>
-    <p>All nine realms breathe again. The weather settles. The hidden dangers retreat into shadow. You have walked through every season and defeated the Corrupted Wanderer — and the world remembers your name.</p>
+    <p>All twelve realms breathe again. The four guardians are fallen. The weather settles. The hidden dangers retreat into shadow. You have walked every season and defeated every corrupted foe — and the world remembers your name.</p>
     <div class="stats-row">
       <div class="stat-box"><div class="val" id="winFrags">0</div><div class="lbl">FRAGMENTS</div></div>
       <div class="stat-box"><div class="val" id="winDeaths">0</div><div class="lbl">DEATHS</div></div>
@@ -419,8 +433,7 @@ body {
 
 // ============================================================
 //  ÆTHERA — Adventurer of the Seasons
-//  v2.1 — heroic audio, timer, 8 characters, PWA,
-//         leaderboard, boss
+//  v3.1 — 12 levels, 4 bosses, checkpoints, BUG FIXES
 // ============================================================
 
 const canvas = document.getElementById('world');
@@ -455,7 +468,7 @@ const JUMP_CUT_VELOCITY = -450;
 const MAX_FALL = 1500;
 
 // ============================================================
-//  AUDIO — Heroic orchestral-inspired Web Audio
+//  AUDIO — SFX only
 // ============================================================
 const AudioEngine = (() => {
   let ac = null;
@@ -477,24 +490,12 @@ const AudioEngine = (() => {
     return true;
   }
 
-  function note(freq, duration, type = 'triangle', gain = 0.15, when = 0, vibrato = false) {
+  function note(freq, duration, type = 'triangle', gain = 0.15, when = 0) {
     if (!ensureCtx()) return;
     const osc = ac.createOscillator();
     const g = ac.createGain();
     osc.type = type;
     osc.frequency.value = freq;
-
-    if (vibrato) {
-      const lfo = ac.createOscillator();
-      const lfoGain = ac.createGain();
-      lfo.frequency.value = 5.5;
-      lfoGain.gain.value = freq * 0.008;
-      lfo.connect(lfoGain);
-      lfoGain.connect(osc.frequency);
-      lfo.start(ac.currentTime + when);
-      lfo.stop(ac.currentTime + when + duration);
-    }
-
     const t = ac.currentTime + when;
     g.gain.setValueAtTime(0, t);
     g.gain.linearRampToValueAtTime(gain, t + 0.02);
@@ -510,10 +511,8 @@ const AudioEngine = (() => {
     freqs.forEach((f, i) => note(f, duration, type, gain, when + i * 0.005));
   }
 
-
   return {
     init: ensureCtx,
-
     jump() {
       if (!ensureCtx()) return;
       const t = ac.currentTime;
@@ -529,7 +528,6 @@ const AudioEngine = (() => {
       osc.start(t);
       osc.stop(t + 0.2);
     },
-
     land() {
       if (!ensureCtx()) return;
       const t = ac.currentTime;
@@ -545,13 +543,11 @@ const AudioEngine = (() => {
       osc.start(t);
       osc.stop(t + 0.12);
     },
-
     fragment() {
       note(1046.5, 0.2, 'sine', 0.1, 0);
       note(1318.5, 0.2, 'sine', 0.08, 0.06);
       note(1568, 0.35, 'sine', 0.07, 0.12);
     },
-
     gem() {
       const notes = [523.25, 659.25, 783.99, 1046.5];
       notes.forEach((f, i) => {
@@ -559,7 +555,6 @@ const AudioEngine = (() => {
         note(f * 2, 0.35, 'sine', 0.04, i * 0.07);
       });
     },
-
     death() {
       if (!ensureCtx()) return;
       const t = ac.currentTime;
@@ -575,7 +570,6 @@ const AudioEngine = (() => {
       osc.start(t);
       osc.stop(t + 0.6);
     },
-
     levelComplete() {
       const melody = [523.25, 659.25, 783.99, 1046.5, 1318.5];
       melody.forEach((f, i) => {
@@ -586,7 +580,6 @@ const AudioEngine = (() => {
         chord([523.25, 659.25, 783.99, 1046.5], 1.2, 'triangle', 0.08);
       }, 650);
     },
-
     bossHit() {
       if (!ensureCtx()) return;
       const t = ac.currentTime;
@@ -602,7 +595,6 @@ const AudioEngine = (() => {
       osc.start(t);
       osc.stop(t + 0.2);
     },
-
     bossRoar() {
       if (!ensureCtx()) return;
       const t = ac.currentTime;
@@ -620,18 +612,20 @@ const AudioEngine = (() => {
         osc.stop(t + 0.85);
       });
     },
-
     secretFound() {
       note(784, 0.25, 'sine', 0.09, 0);
       note(1046.5, 0.3, 'sine', 0.09, 0.1);
       note(1318.5, 0.45, 'sine', 0.08, 0.2);
     },
-
     trapTrigger() {
       note(660, 0.08, 'square', 0.07);
       note(440, 0.12, 'square', 0.06, 0.06);
     },
-
+    checkpoint() {
+      note(659.25, 0.2, 'sine', 0.1, 0);
+      note(783.99, 0.2, 'sine', 0.1, 0.1);
+      note(1046.5, 0.5, 'sine', 0.12, 0.2);
+    },
     toggle() {
       muted = !muted;
       if (master) master.gain.linearRampToValueAtTime(muted ? 0 : 0.45, ac.currentTime + 0.1);
@@ -650,65 +644,38 @@ soundToggle.addEventListener('click', () => {
 });
 
 // ============================================================
-//  CHARACTER ROSTER — 8 characters
+//  CHARACTER ROSTER
 // ============================================================
 const CHARACTERS = [
-  {
-    id: 'adventurer', name: 'THE ADVENTURER', tag: 'Hooded Wanderer', tagClass: '',
+  { id: 'adventurer', name: 'THE ADVENTURER', tag: 'Hooded Wanderer', tagClass: '',
     skin: '#e8c8a0', body: '#3a2a4a', bodyLight: '#4a3a5a',
-    accent: '#5a3a1a', accent2: '#8a6a3a', hair: '#2a1a3a', boots: '#2a1a0a',
-    style: 'hooded'
-  },
-  {
-    id: 'saiyan', name: 'THE SAIYAN', tag: 'Golden Warrior', tagClass: 'special',
+    accent: '#5a3a1a', accent2: '#8a6a3a', hair: '#2a1a3a', boots: '#2a1a0a', style: 'hooded' },
+  { id: 'saiyan', name: 'THE SAIYAN', tag: 'Golden Warrior', tagClass: 'special',
     skin: '#e8c8a0', body: '#ff8c00', bodyLight: '#ffa030',
-    accent: '#1a4a8a', accent2: '#ffe855', hair: '#ffdd44', boots: '#1a4a8a',
-    style: 'saiyan'
-  },
-  {
-    id: 'ninja', name: 'THE NINJA', tag: 'Silent Blade', tagClass: 'special3',
+    accent: '#1a4a8a', accent2: '#ffe855', hair: '#ffdd44', boots: '#1a4a8a', style: 'saiyan' },
+  { id: 'ninja', name: 'THE NINJA', tag: 'Silent Blade', tagClass: 'special3',
     skin: '#d8c0a0', body: '#1a1a2a', bodyLight: '#2a2a3a',
-    accent: '#c03030', accent2: '#ff5a5a', hair: '#0a0a0a', boots: '#0a0a0a',
-    style: 'ninja'
-  },
-  {
-    id: 'mage', name: 'THE MAGE', tag: 'Arcane Scholar', tagClass: 'special4',
+    accent: '#c03030', accent2: '#ff5a5a', hair: '#0a0a0a', boots: '#0a0a0a', style: 'ninja' },
+  { id: 'mage', name: 'THE MAGE', tag: 'Arcane Scholar', tagClass: 'special4',
     skin: '#f0d8b8', body: '#3a1a5a', bodyLight: '#5a2a7a',
-    accent: '#a07aff', accent2: '#c8a0ff', hair: '#e8e8e8', boots: '#2a1a3a',
-    style: 'mage'
-  },
-  {
-    id: 'ranger', name: 'THE RANGER', tag: 'Forest Watcher', tagClass: 'special2',
+    accent: '#a07aff', accent2: '#c8a0ff', hair: '#e8e8e8', boots: '#2a1a3a', style: 'mage' },
+  { id: 'ranger', name: 'THE RANGER', tag: 'Forest Watcher', tagClass: 'special2',
     skin: '#e0c098', body: '#2a4a2a', bodyLight: '#3a5a3a',
-    accent: '#5a3a1a', accent2: '#8a6a3a', hair: '#4a2a1a', boots: '#3a2a1a',
-    style: 'ranger'
-  },
-  {
-    id: 'knight', name: 'THE KNIGHT', tag: 'Steel Vow', tagClass: 'special5',
+    accent: '#5a3a1a', accent2: '#8a6a3a', hair: '#4a2a1a', boots: '#3a2a1a', style: 'ranger' },
+  { id: 'knight', name: 'THE KNIGHT', tag: 'Steel Vow', tagClass: 'special5',
     skin: '#f0d8b8', body: '#8a8a9a', bodyLight: '#a0a0b0',
-    accent: '#c8a850', accent2: '#ffe8a0', hair: '#4a2a1a', boots: '#4a4a5a',
-    style: 'knight'
-  },
-  {
-    id: 'ghost', name: 'THE GHOST', tag: 'Echo of Before', tagClass: 'special6',
+    accent: '#c8a850', accent2: '#ffe8a0', hair: '#4a2a1a', boots: '#4a4a5a', style: 'knight' },
+  { id: 'ghost', name: 'THE GHOST', tag: 'Echo of Before', tagClass: 'special6',
     skin: '#b8e8e8', body: '#4a8a8a', bodyLight: '#6aaaaa',
-    accent: '#a0ffb0', accent2: '#d0ffd0', hair: '#2a5a5a', boots: '#1a3a3a',
-    style: 'ghost'
-  },
-  {
-    id: 'robot', name: 'THE AUTOMATON', tag: 'Ancient Machine', tagClass: 'special7',
+    accent: '#a0ffb0', accent2: '#d0ffd0', hair: '#2a5a5a', boots: '#1a3a3a', style: 'ghost' },
+  { id: 'robot', name: 'THE AUTOMATON', tag: 'Ancient Machine', tagClass: 'special7',
     skin: '#c0c8d8', body: '#5a6a7a', bodyLight: '#7a8a9a',
-    accent: '#ff5a5a', accent2: '#ff8a8a', hair: '#3a4a5a', boots: '#2a3a4a',
-    style: 'robot'
-  }
+    accent: '#ff5a5a', accent2: '#ff8a8a', hair: '#3a4a5a', boots: '#2a3a4a', style: 'robot' }
 ];
 
 let selectedChar = null;
 let activeChar = CHARACTERS[0];
 
-// ============================================================
-//  WEATHER
-// ============================================================
 const WEATHER_PER_SEASON = {
   SPRING: ['clear', 'rain', 'mist', 'clear'],
   SUMMER: ['clear', 'clear', 'storm', 'clear'],
@@ -735,21 +702,22 @@ function buildLevel(cfg) {
     platforms: cfg.platforms,
     traps: cfg.traps,
     hiddenTraps: cfg.hiddenTraps || [],
-    pillars: cfg.pillars || [],
     fragments: cfg.fragments,
     portal: cfg.portal,
     length: cfg.length,
     fragmentGoal: cfg.fragments.length,
-    isBoss: !!cfg.isBoss
+    isBoss: !!cfg.isBoss,
+    bossName: cfg.bossName || 'CORRUPTED WANDERER',
+    bossHp: cfg.bossHp || 5
   };
 }
 
 // ============================================================
-//  LEVELS — 8 original + boss
+//  LEVELS — 12 with 4 boss levels
 // ============================================================
 const LEVELS = [
   buildLevel({
-    name: 'SPRING', season: 'SPRING', sub: 'LEVEL 1 / 9',
+    name: 'SPRING', season: 'SPRING', sub: 'LEVEL 1 / 12',
     theme: { sky: ['#0a1a3a','#1a3a5a','#3a8a6a','#a8e8c0'], ground: '#1a3a2a', groundTop: '#4a9a6a', accent: '#8affc0', particleColor: '#c8ffb0' },
     platforms: [
       {x:0,y:10,w:6,h:3,type:'g'}, {x:8,y:10,w:4,h:3,type:'g'}, {x:14,y:10,w:5,h:3,type:'g'},
@@ -784,7 +752,7 @@ const LEVELS = [
     length: 82
   }),
   buildLevel({
-    name: 'SUMMER', season: 'SUMMER', sub: 'LEVEL 2 / 9',
+    name: 'SUMMER', season: 'SUMMER', sub: 'LEVEL 2 / 12',
     theme: { sky: ['#1a0a04','#5a1a0a','#c2541f','#ffd27a'], ground: '#3a1a0a', groundTop: '#ff8a4a', accent: '#ffb347', particleColor: '#ffd27a' },
     platforms: [
       {x:0,y:10,w:5,h:3,type:'g'}, {x:7,y:10,w:3,h:3,type:'g'}, {x:12,y:10,w:3,h:3,type:'g'},
@@ -825,7 +793,34 @@ const LEVELS = [
     length: 84
   }),
   buildLevel({
-    name: 'AUTUMN', season: 'AUTUMN', sub: 'LEVEL 3 / 9',
+    name: 'THE ASHEN WARDEN', season: 'BOSS', sub: 'BOSS 1 / 4',
+    isBoss: true, bossName: 'THE ASHEN WARDEN', bossHp: 4,
+    theme: { sky: ['#1a0a04','#3a0a04','#8a1a04','#ff6a3a'], ground: '#2a0a04', groundTop: '#ff5a3a', accent: '#ffb347', particleColor: '#ff9a6a' },
+    platforms: [
+      {x:0,y:10,w:8,h:3,type:'g'}, {x:9,y:10,w:3,h:3,type:'g'}, {x:13,y:10,w:2,h:3,type:'g'},
+      {x:16,y:10,w:2,h:3,type:'g'}, {x:19,y:10,w:2,h:3,type:'g'}, {x:22,y:10,w:2,h:3,type:'g'},
+      {x:25,y:10,w:3,h:3,type:'g'}, {x:29,y:10,w:2,h:3,type:'g'}, {x:32,y:10,w:2,h:3,type:'g'},
+      {x:35,y:10,w:2,h:3,type:'g'}, {x:38,y:10,w:6,h:3,type:'g'}, {x:45,y:10,w:8,h:3,type:'g'},
+      {x:5,y:6,w:2,h:1,type:'p'}, {x:10,y:5,w:2,h:1,type:'p'}, {x:15,y:7,w:2,h:1,type:'p'},
+      {x:20,y:5,w:2,h:1,type:'p'}, {x:27,y:6,w:2,h:1,type:'p'}, {x:34,y:5,w:2,h:1,type:'p'},
+      {x:41,y:6,w:2,h:1,type:'p'}, {x:47,y:7,w:2,h:1,type:'p'}
+    ],
+    traps: [
+      {type:'spike',x:3,y:9,w:2,h:1}, {type:'fire',x:10,y:9,w:1,h:1},
+      {type:'spike',x:17,y:9,w:1,h:1}, {type:'fire',x:26,y:9,w:1,h:1},
+      {type:'spike',x:33,y:9,w:1,h:1}, {type:'fire',x:40,y:9,w:2,h:1},
+      {type:'spike',x:48,y:9,w:1,h:1}
+    ],
+    hiddenTraps: [
+      {type:'laser', x:12, y:8, triggerRadius:7},
+      {type:'laser', x:30, y:8, triggerRadius:7}
+    ],
+    fragments: [{x:5.5,y:5.5},{x:20.5,y:4.5},{x:47.5,y:6.5}],
+    portal: {x:50,y:8},
+    length: 52
+  }),
+  buildLevel({
+    name: 'AUTUMN', season: 'AUTUMN', sub: 'LEVEL 4 / 12',
     theme: { sky: ['#1a0a18','#3a1a2a','#8a3a2a','#ffb87a'], ground: '#3a1a14', groundTop: '#c47a3a', accent: '#ffaa5a', particleColor: '#ffd4a0' },
     platforms: [
       {x:0,y:10,w:4,h:3,type:'g'}, {x:6,y:10,w:2,h:3,type:'g'}, {x:10,y:10,w:2,h:3,type:'g'},
@@ -871,7 +866,7 @@ const LEVELS = [
     length: 89
   }),
   buildLevel({
-    name: 'WINTER', season: 'WINTER', sub: 'LEVEL 4 / 9',
+    name: 'WINTER', season: 'WINTER', sub: 'LEVEL 5 / 12',
     theme: { sky: ['#05101a','#0a2a4a','#2a6a9a','#c4ecff'], ground: '#0a1a2a', groundTop: '#8ad4ff', accent: '#c4ecff', particleColor: '#e8f8ff' },
     platforms: [
       {x:0,y:10,w:3,h:3,type:'g'}, {x:5,y:10,w:2,h:3,type:'g'}, {x:9,y:10,w:2,h:3,type:'g'},
@@ -918,7 +913,35 @@ const LEVELS = [
     length: 89
   }),
   buildLevel({
-    name: 'CRYSTAL CAVERN', season: 'WINTER', sub: 'LEVEL 5 / 9',
+    name: 'THE FROST TYRANT', season: 'BOSS', sub: 'BOSS 2 / 4',
+    isBoss: true, bossName: 'THE FROST TYRANT', bossHp: 5,
+    theme: { sky: ['#05101a','#0a2a4a','#2a6a9a','#c4ecff'], ground: '#0a1a2a', groundTop: '#8ad4ff', accent: '#c4ecff', particleColor: '#e8f8ff' },
+    platforms: [
+      {x:0,y:10,w:8,h:3,type:'g'}, {x:9,y:10,w:3,h:3,type:'g'}, {x:13,y:10,w:2,h:3,type:'g'},
+      {x:16,y:10,w:2,h:3,type:'g'}, {x:19,y:10,w:2,h:3,type:'g'}, {x:22,y:10,w:2,h:3,type:'g'},
+      {x:25,y:10,w:3,h:3,type:'g'}, {x:29,y:10,w:2,h:3,type:'g'}, {x:32,y:10,w:2,h:3,type:'g'},
+      {x:35,y:10,w:2,h:3,type:'g'}, {x:38,y:10,w:6,h:3,type:'g'}, {x:45,y:10,w:8,h:3,type:'g'},
+      {x:5,y:6,w:2,h:1,type:'p'}, {x:10,y:5,w:2,h:1,type:'p'}, {x:15,y:7,w:2,h:1,type:'p'},
+      {x:20,y:5,w:2,h:1,type:'p'}, {x:27,y:6,w:2,h:1,type:'p'}, {x:34,y:5,w:2,h:1,type:'p'},
+      {x:41,y:6,w:2,h:1,type:'p'}, {x:47,y:7,w:2,h:1,type:'p'}
+    ],
+    traps: [
+      {type:'spike',x:3,y:9,w:2,h:1}, {type:'fire',x:10,y:9,w:1,h:1},
+      {type:'spike',x:17,y:9,w:1,h:1}, {type:'fire',x:26,y:9,w:1,h:1},
+      {type:'spike',x:33,y:9,w:1,h:1}, {type:'fire',x:40,y:9,w:2,h:1},
+      {type:'spike',x:48,y:9,w:1,h:1}
+    ],
+    hiddenTraps: [
+      {type:'laser', x:12, y:8, triggerRadius:7},
+      {type:'laser', x:30, y:8, triggerRadius:7},
+      {type:'crusher', x:42, y:2, triggerRadius:5}
+    ],
+    fragments: [{x:5.5,y:5.5},{x:20.5,y:4.5},{x:47.5,y:6.5}],
+    portal: {x:50,y:8},
+    length: 52
+  }),
+  buildLevel({
+    name: 'CRYSTAL CAVERN', season: 'WINTER', sub: 'LEVEL 7 / 12',
     theme: { sky: ['#0a0410','#1a0a2a','#3a1a5a','#a07aff'], ground: '#1a0a2a', groundTop: '#8a5aff', accent: '#c8a0ff', particleColor: '#d8b8ff' },
     platforms: [
       {x:0,y:10,w:3,h:3,type:'g'}, {x:5,y:10,w:2,h:3,type:'g'}, {x:9,y:10,w:2,h:3,type:'g'},
@@ -967,7 +990,7 @@ const LEVELS = [
     length: 88
   }),
   buildLevel({
-    name: 'SHADOW REALM', season: 'AUTUMN', sub: 'LEVEL 6 / 9',
+    name: 'SHADOW REALM', season: 'AUTUMN', sub: 'LEVEL 8 / 12',
     theme: { sky: ['#05050f','#0f0f20','#1f1f3a','#4a3a6a'], ground: '#0a0a18', groundTop: '#3a2a5a', accent: '#a07aff', particleColor: '#b0a0d0' },
     platforms: [
       {x:0,y:10,w:3,h:3,type:'g'}, {x:5,y:10,w:2,h:3,type:'g'}, {x:9,y:10,w:2,h:3,type:'g'},
@@ -1020,7 +1043,36 @@ const LEVELS = [
     length: 92
   }),
   buildLevel({
-    name: 'VOLCANIC CORE', season: 'SUMMER', sub: 'LEVEL 7 / 9',
+    name: 'THE VOID SOVEREIGN', season: 'BOSS', sub: 'BOSS 3 / 4',
+    isBoss: true, bossName: 'THE VOID SOVEREIGN', bossHp: 6,
+    theme: { sky: ['#05050f','#0f0f20','#2a1a4a','#a07aff'], ground: '#0a0a18', groundTop: '#4a2a7a', accent: '#c8a0ff', particleColor: '#d0b8ff' },
+    platforms: [
+      {x:0,y:10,w:8,h:3,type:'g'}, {x:9,y:10,w:3,h:3,type:'g'}, {x:13,y:10,w:2,h:3,type:'g'},
+      {x:16,y:10,w:2,h:3,type:'g'}, {x:19,y:10,w:2,h:3,type:'g'}, {x:22,y:10,w:2,h:3,type:'g'},
+      {x:25,y:10,w:3,h:3,type:'g'}, {x:29,y:10,w:2,h:3,type:'g'}, {x:32,y:10,w:2,h:3,type:'g'},
+      {x:35,y:10,w:2,h:3,type:'g'}, {x:38,y:10,w:6,h:3,type:'g'}, {x:45,y:10,w:8,h:3,type:'g'},
+      {x:5,y:6,w:2,h:1,type:'p'}, {x:10,y:5,w:2,h:1,type:'p'}, {x:15,y:7,w:2,h:1,type:'p'},
+      {x:20,y:5,w:2,h:1,type:'p'}, {x:27,y:6,w:2,h:1,type:'p'}, {x:34,y:5,w:2,h:1,type:'p'},
+      {x:41,y:6,w:2,h:1,type:'p'}, {x:47,y:7,w:2,h:1,type:'p'}
+    ],
+    traps: [
+      {type:'spike',x:3,y:9,w:2,h:1}, {type:'fire',x:10,y:9,w:1,h:1},
+      {type:'spike',x:17,y:9,w:1,h:1}, {type:'fire',x:26,y:9,w:1,h:1},
+      {type:'spike',x:33,y:9,w:1,h:1}, {type:'fire',x:40,y:9,w:2,h:1},
+      {type:'spike',x:48,y:9,w:1,h:1}
+    ],
+    hiddenTraps: [
+      {type:'laser', x:12, y:8, triggerRadius:7},
+      {type:'laser', x:30, y:8, triggerRadius:7},
+      {type:'laser', x:44, y:8, triggerRadius:7},
+      {type:'mirror', x:22, y:9, triggerRadius:3}
+    ],
+    fragments: [{x:5.5,y:5.5},{x:20.5,y:4.5},{x:47.5,y:6.5}],
+    portal: {x:50,y:8},
+    length: 52
+  }),
+  buildLevel({
+    name: 'VOLCANIC CORE', season: 'SUMMER', sub: 'LEVEL 10 / 12',
     theme: { sky: ['#1a0404','#3a0a04','#8a1a04','#ff6a3a'], ground: '#2a0a04', groundTop: '#ff5a3a', accent: '#ff6a3a', particleColor: '#ff9a6a' },
     platforms: [
       {x:0,y:10,w:3,h:3,type:'g'}, {x:5,y:10,w:2,h:3,type:'g'}, {x:9,y:10,w:2,h:3,type:'g'},
@@ -1074,7 +1126,7 @@ const LEVELS = [
     length: 96
   }),
   buildLevel({
-    name: 'FINAL THRESHOLD', season: 'SPRING', sub: 'LEVEL 8 / 9',
+    name: 'FINAL THRESHOLD', season: 'SPRING', sub: 'LEVEL 11 / 12',
     theme: { sky: ['#0a0410','#2a0a3a','#6a1a6a','#ffa0e0'], ground: '#1a0a2a', groundTop: '#ff6ac4', accent: '#ff9ae0', particleColor: '#ffc8f0' },
     platforms: [
       {x:0,y:10,w:3,h:3,type:'g'}, {x:5,y:10,w:2,h:3,type:'g'}, {x:9,y:10,w:2,h:3,type:'g'},
@@ -1132,7 +1184,7 @@ const LEVELS = [
   }),
   buildLevel({
     name: 'THE CORRUPTED WANDERER', season: 'BOSS', sub: 'FINAL BOSS',
-    isBoss: true,
+    isBoss: true, bossName: 'THE CORRUPTED WANDERER', bossHp: 7,
     theme: { sky: ['#1a0404','#3a0a1a','#6a0a3a','#ff2a6a'], ground: '#1a0a0a', groundTop: '#8a0a2a', accent: '#ff2a6a', particleColor: '#ff8aaa' },
     platforms: [
       {x:0,y:10,w:8,h:3,type:'g'}, {x:9,y:10,w:3,h:3,type:'g'}, {x:13,y:10,w:2,h:3,type:'g'},
@@ -1152,7 +1204,8 @@ const LEVELS = [
     hiddenTraps: [
       {type:'laser', x:12, y:8, triggerRadius:7},
       {type:'laser', x:30, y:8, triggerRadius:7},
-      {type:'laser', x:44, y:8, triggerRadius:7}
+      {type:'laser', x:44, y:8, triggerRadius:7},
+      {type:'voidrift', x:22, y:9, triggerRadius:4}
     ],
     fragments: [{x:5.5,y:5.5},{x:20.5,y:4.5},{x:47.5,y:6.5}],
     portal: {x:50,y:8},
@@ -1200,14 +1253,13 @@ const game = {
   totalRunTime: 0,
   boss: null,
   bossProjectiles: [],
-  bestTimes: {}
+  bestTimes: {},
+  checkpoint: null,
+  checkpointReached: false
 };
 
-// ============================================================
-//  LEADERBOARD
-// ============================================================
 const Leaderboard = {
-  KEY: 'aethera_best_times_v1',
+  KEY: 'aethera_best_times_v2',
   load() {
     try {
       const raw = localStorage.getItem(this.KEY);
@@ -1254,9 +1306,6 @@ function formatTime(seconds) {
   return m + ':' + String(r).padStart(2, '0');
 }
 
-// ============================================================
-//  PLAYER
-// ============================================================
 function createPlayer(x, y) {
   return {
     x: x * TILE, y: y * TILE,
@@ -1274,7 +1323,7 @@ function createPlayer(x, y) {
 }
 
 function initPillarPlatforms(level) {
-  return level.pillars.map(p => ({
+  return (level.pillars || []).map(p => ({
     x: p.x * TILE, y: p.y * TILE,
     h: p.h * TILE, w: TILE * 1.2
   }));
@@ -1320,57 +1369,81 @@ function rectsOverlap(a, b) {
 }
 
 // ============================================================
-//  BOSS
+//  CHECKPOINT SYSTEM
+// ============================================================
+function computeCheckpoint(level) {
+  if (level.isBoss) return null;
+  const midX = Math.floor(level.length / 2);
+  return { x: midX, y: 9 };
+}
+
+function shouldActivateCheckpoint(px) {
+  if (!game.checkpoint || game.checkpointReached) return false;
+  const thresholdX = game.checkpoint.x * TILE;
+  return Math.abs(px - thresholdX) < TILE * 1.5;
+}
+
+// ============================================================
+//  BOSS (BUG FIX: safe spawn and update)
 // ============================================================
 function spawnBoss() {
+  if (!game.level || !game.level.isBoss) return;
+  const hp = game.level.bossHp || 5;
   game.boss = {
     x: game.level.length * TILE - 300,
     y: H * 0.78 - 120,
     w: 60, h: 120,
-    hp: 5, maxHp: 5,
+    hp: hp, maxHp: hp,
     vx: 0,
-    attackTimer: 2.5,
+    attackTimer: 4.5,
     hitFlash: 0,
     phase: 1,
     floatPhase: 0,
-    dead: false
+    dead: false,
+    graceTimer: 2.0
   };
+  game.bossProjectiles = [];
   AudioEngine.bossRoar();
-  toast('THE CORRUPTED WANDERER AWAKENS');
+  toast((game.level.bossName || 'THE CORRUPTED WANDERER') + ' AWAKENS');
 }
 
 function updateBoss(dt) {
   if (!game.boss || game.boss.dead) return;
   const b = game.boss;
   const p = game.player;
+  if (!p) return;
   b.hitFlash = Math.max(0, b.hitFlash - dt);
   b.floatPhase += dt * 2;
+  if (b.graceTimer > 0) b.graceTimer -= dt;
 
   const targetX = Math.min(game.level.length * TILE - 100, Math.max(100, p.x - 200));
   b.vx = lerp(b.vx, (targetX - b.x) * 2, 0.02);
   b.x += b.vx * dt;
   b.y = H * 0.78 - 120 + Math.sin(b.floatPhase) * 20;
 
-  b.attackTimer -= dt;
-  if (b.attackTimer <= 0) {
-    b.attackTimer = b.hp > 2 ? 1.8 : 1.2;
-    const dx = (p.x + p.w / 2) - (b.x + b.w / 2);
-    const dy = (p.y + p.h / 2) - (b.y + b.h / 2);
-    const dist = Math.hypot(dx, dy) || 1;
-    const speed = 380;
-    game.bossProjectiles.push({
-      x: b.x + b.w / 2,
-      y: b.y + b.h / 2,
-      vx: (dx / dist) * speed,
-      vy: (dy / dist) * speed,
-      life: 3.0,
-      trail: []
-    });
-    AudioEngine.bossHit();
+  if (b.graceTimer <= 0) {
+    b.attackTimer -= dt;
+    if (b.attackTimer <= 0) {
+      b.attackTimer = b.hp > b.maxHp / 2 ? 1.8 : 1.2;
+      const dx = (p.x + p.w / 2) - (b.x + b.w / 2);
+      const dy = (p.y + p.h / 2) - (b.y + b.h / 2);
+      const dist = Math.hypot(dx, dy) || 1;
+      const speed = 380;
+      game.bossProjectiles.push({
+        x: b.x + b.w / 2,
+        y: b.y + b.h / 2,
+        vx: (dx / dist) * speed,
+        vy: (dy / dist) * speed,
+        life: 3.0,
+        trail: []
+      });
+      AudioEngine.bossHit();
+    }
   }
 
   const bBox = { x: b.x + 8, y: b.y + 8, w: b.w - 16, h: b.h - 16 };
   const pBox = { x: p.x + 4, y: p.y + 4, w: p.w - 8, h: p.h - 8 };
+
   if (!game.invincibilityTimer && !game.invulnTimer && !p.mirrorLock) {
     if (rectsOverlap(pBox, bBox)) {
       p.vx = (p.x < b.x ? -1 : 1) * 400;
@@ -1392,7 +1465,7 @@ function updateBoss(dt) {
         b.dead = true;
         AudioEngine.bossRoar();
         spawnBurst(b.x + b.w / 2, b.y + b.h / 2, 80, '#ff2a6a');
-        toast('THE CORRUPTED WANDERER FALLS');
+        toast(game.level.bossName + ' FALLS');
       } else {
         toast('HIT! ' + b.hp + ' MORE TO GO');
       }
@@ -1489,7 +1562,7 @@ function renderBoss() {
   ctx.fillStyle = 'rgba(255,42,106,0.3)';
   ctx.fillRect(barX, barY, barW, barH);
   ctx.fillStyle = '#ff2a6a';
-  ctx.fillRect(barX, barY, barW * (b.hp / b.maxHp), barH);
+  ctx.fillRect(barX, barY, barW * Math.max(0, b.hp / b.maxHp), barH);
   ctx.strokeStyle = '#ff8aaa';
   ctx.lineWidth = 1;
   ctx.strokeRect(barX, barY, barW, barH);
@@ -1661,6 +1734,17 @@ function updatePlayer(dt) {
 
   if (!wasOnGround && p.onGround && p.vy === 0) {
     AudioEngine.land();
+  }
+
+  if (game.checkpoint && !game.checkpointReached && p.onGround) {
+    if (shouldActivateCheckpoint(p.x + p.w / 2)) {
+      game.checkpointReached = true;
+      AudioEngine.checkpoint();
+      toast('CHECKPOINT REACHED');
+      updateHUD();
+      const cpMark = document.getElementById('checkpointMark');
+      if (cpMark) cpMark.classList.add('passed');
+    }
   }
 
   if (p.onGround && Math.abs(p.vx) > 20) p.walkPhase += dt * (sprint ? 18 : 12);
@@ -1948,6 +2032,7 @@ function triggerHiddenTrap(ht) {
 
 function updateHiddenTraps(dt) {
   const p = game.player;
+  if (!p) return;
   const pBox = { x: p.x + 4, y: p.y + 4, w: p.w - 8, h: p.h - 8 };
   const shielded = game.invincibilityTimer > 0 || game.invulnTimer > 0;
 
@@ -2187,23 +2272,64 @@ function killPlayer() {
   }
 }
 
+// ============================================================
+//  RESPAWN (BUG FIX: always brings player back)
+// ============================================================
 function respawn() {
   if (game.secretRoomActive) leaveSecretRoom(false);
-  const s = game.level.start || { x: 1, y: 9 };
-  game.player = createPlayer(s.x, s.y);
-  game.camera.x = 0;
-  game.invulnTimer = 2.0;
+
+  let spawnX, spawnY;
+  if (game.level.isBoss) {
+    spawnX = game.level.start.x;
+    spawnY = game.level.start.y;
+  } else if (game.checkpointReached && game.checkpoint) {
+    spawnX = game.checkpoint.x;
+    spawnY = game.checkpoint.y;
+  } else {
+    spawnX = game.level.start.x;
+    spawnY = game.level.start.y;
+  }
+
+  game.player = createPlayer(spawnX, spawnY);
+  game.camera.x = clamp(game.player.x - W / 2, 0, game.level.length * TILE - W);
+  game.invulnTimer = 2.5;
   game.respawnTimer = 0;
   game.flying = false;
   game.invincibilityTimer = 0;
   game.fallImmunityTimer = 0;
-  game.pillarPlatforms = initPillarPlatforms(game.level);
+
+  // Reset trap state for the level
   game.hiddenTraps = initHiddenTraps(game.level);
+  game.pillarPlatforms = initPillarPlatforms(game.level);
   game.collapseTimers.clear();
   game.rocks = [];
   game.darts = [];
   game.lasers = [];
   game.bossProjectiles = [];
+
+  // Force a gem soon after respawn
+  if (!game.powerGem) {
+    game.gemNextSpawn = game.time + 2;
+  }
+
+  // Boss reset
+  if (game.level.isBoss) {
+    if (!game.boss || game.boss.dead) {
+      spawnBoss();
+    } else {
+      game.boss.hp = game.boss.maxHp;
+      game.boss.hitFlash = 0;
+      game.boss.attackTimer = 4.5;
+      game.boss.graceTimer = 2.0;
+      game.boss.x = game.level.length * TILE - 300;
+      game.boss.vx = 0;
+    }
+    AudioEngine.bossRoar();
+    toast(game.level.bossName + ' REFORMS — TRY AGAIN');
+  }
+
+  updateHUD();
+  updateProgress();
 }
 
 function gameOver() {
@@ -2246,6 +2372,9 @@ function completeLevel() {
   spawnBurst(game.player.x + game.player.w / 2, game.player.y + game.player.h / 2, 40, '#72f7ff');
 }
 
+// ============================================================
+//  LOAD LEVEL (BUG FIX: deferred boss spawn)
+// ============================================================
 function loadLevel(index) {
   game.levelIndex = index;
   game.level = JSON.parse(JSON.stringify(LEVELS[index]));
@@ -2262,7 +2391,7 @@ function loadLevel(index) {
   game.secretRoomReward = { x: (roomX + 7) * TILE, y: 7 * TILE, collected: false };
   game.fragments = 0;
   game.respawnTimer = 0;
-  game.invulnTimer = 1.0;
+  game.invulnTimer = 1.5;
   game.invincibilityTimer = 0;
   game.fallImmunityTimer = 0;
   game.flying = false;
@@ -2283,7 +2412,29 @@ function loadLevel(index) {
   game.boss = null;
   game.bossProjectiles = [];
 
-  if (game.level.isBoss) spawnBoss();
+  game.checkpoint = computeCheckpoint(game.level);
+  game.checkpointReached = false;
+  const cpMark = document.getElementById('checkpointMark');
+  if (cpMark) {
+    cpMark.classList.remove('passed');
+    if (game.level.isBoss || !game.checkpoint) {
+      cpMark.style.display = 'none';
+    } else {
+      cpMark.style.display = 'block';
+      const cpPct = (game.checkpoint.x / game.level.length) * 100;
+      cpMark.style.left = cpPct + '%';
+    }
+  }
+  document.getElementById('cpPill').style.display = 'none';
+
+  // Defer boss spawn so H is guaranteed valid on first frame
+  if (game.level.isBoss) {
+    requestAnimationFrame(() => {
+      if (game.running && game.level && game.level.isBoss) {
+        spawnBoss();
+      }
+    });
+  }
 
   game.weatherTimer = 0;
   game.weatherNext = 12;
@@ -2379,9 +2530,6 @@ function updateWeatherUI() {
   document.getElementById('weatherState').textContent = info.label;
 }
 
-// ============================================================
-//  PARTICLES
-// ============================================================
 function spawnBurst(x, y, count, color) {
   for (let i = 0; i < count; i++) {
     const angle = Math.random() * Math.PI * 2;
@@ -2457,6 +2605,35 @@ function render() {
   const camX = game.camera.x;
   const viewL = camX - 100;
   const viewR = camX + W + 100;
+
+  // Checkpoint visual
+  if (game.checkpoint && !game.level.isBoss) {
+    const cpX = game.checkpoint.x * TILE;
+    if (cpX > viewL && cpX < viewR) {
+      const cpY = game.checkpoint.y * TILE;
+      const pulse = 0.6 + Math.sin(game.time * 3) * 0.3;
+      ctx.save();
+      ctx.globalAlpha = game.checkpointReached ? 0.9 : pulse;
+      const glowColor = game.checkpointReached ? '#a0ffb0' : '#72f7ff';
+      ctx.shadowColor = glowColor;
+      ctx.shadowBlur = 25;
+      const lightGrad = ctx.createLinearGradient(cpX, cpY - 200, cpX, cpY);
+      lightGrad.addColorStop(0, 'rgba(160, 255, 176, 0)');
+      lightGrad.addColorStop(1, `${glowColor}40`);
+      ctx.fillStyle = lightGrad;
+      ctx.fillRect(cpX - 20, cpY - 200, 40, 200);
+      ctx.fillStyle = glowColor;
+      ctx.beginPath();
+      ctx.arc(cpX, cpY - 10, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#0a1a2a';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(game.checkpointReached ? '✓' : '◆', cpX, cpY - 6);
+      ctx.restore();
+    }
+  }
 
   if (game.secretRoom && !game.secretRoomActive) {
     const ex = game.secretRoom.entranceX * TILE;
@@ -2582,25 +2759,6 @@ function render() {
         }
       }
     }
-  }
-
-  for (const pil of game.pillarPlatforms) {
-    if (pil.x + pil.w < viewL || pil.x > viewR) continue;
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.fillRect(pil.x + 4, H * 0.78 - 6, pil.w, 6);
-    const g = ctx.createLinearGradient(pil.x, pil.y, pil.x + pil.w, pil.y);
-    g.addColorStop(0, '#3a2a4a');
-    g.addColorStop(0.5, '#6a5a7a');
-    g.addColorStop(1, '#2a1a3a');
-    ctx.fillStyle = g;
-    ctx.fillRect(pil.x, pil.y, pil.w, pil.h);
-    ctx.fillStyle = theme.accent;
-    ctx.globalAlpha = 0.5 + Math.sin(game.time * 3) * 0.15;
-    ctx.fillRect(pil.x, pil.y, pil.w, 4);
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(pil.x, pil.y, pil.w, pil.h);
   }
 
   for (const trap of game.level.traps) {
@@ -4306,6 +4464,14 @@ function updateHUD() {
   } else {
     invPill.style.display = 'none';
   }
+
+  const cpPill = document.getElementById('cpPill');
+  if (game.checkpointReached && game.checkpoint && game.level && !game.level.isBoss) {
+    cpPill.style.display = 'flex';
+    document.getElementById('cpState').textContent = '✓';
+  } else {
+    cpPill.style.display = 'none';
+  }
 }
 
 function updateTimerHUD() {
@@ -4313,6 +4479,7 @@ function updateTimerHUD() {
 }
 
 function updateProgress() {
+  if (!game.level || !game.player) return;
   const total = game.level.length * TILE;
   const progress = clamp((game.player.x + game.player.w) / total, 0, 1);
   document.getElementById('progressFill').style.width = (progress * 100) + '%';

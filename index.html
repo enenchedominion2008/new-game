@@ -433,7 +433,7 @@ body {
 
 // ============================================================
 //  ÆTHERA — Adventurer of the Seasons
-//  v3.2 — 12 levels, 4 bosses, safe checkpoints, 5 new hidden traps
+//  v3.3 — Boss floats above pillars, snappy flight, lethal beams
 // ============================================================
 
 const canvas = document.getElementById('world');
@@ -462,7 +462,8 @@ const GRAVITY = 1900;
 const GRAVITY_ASCEND = 1500;
 const MOVE_SPEED = 280;
 const SPRINT_SPEED = 440;
-const FLY_SPEED = 340;
+const FLY_SPEED = 560;            // Fast flight
+const FLY_DOWN_SPEED = 800;       // Super fast dive
 const JUMP_VELOCITY = -950;
 const JUMP_CUT_VELOCITY = -450;
 const MAX_FALL = 1500;
@@ -1467,23 +1468,23 @@ function shouldActivateCheckpoint(px) {
 }
 
 // ============================================================
-//  BOSS (BUG FIX: safe spawn and update)
+//  BOSS (FIXED: floats above pillars, aggressive beams)
 // ============================================================
 function spawnBoss() {
   if (!game.level || !game.level.isBoss) return;
   const hp = game.level.bossHp || 5;
   game.boss = {
     x: game.level.length * TILE - 300,
-    y: H * 0.78 - 120,
+    y: H * 0.35,             // FIXED: Spawns high up
     w: 60, h: 120,
     hp: hp, maxHp: hp,
     vx: 0,
-    attackTimer: 4.5,
+    attackTimer: 2.2,        // Fast first attack
     hitFlash: 0,
     phase: 1,
     floatPhase: 0,
     dead: false,
-    graceTimer: 2.0
+    graceTimer: 1.2          // Short grace period
   };
   game.bossProjectiles = [];
   AudioEngine.bossRoar();
@@ -1502,22 +1503,31 @@ function updateBoss(dt) {
   const targetX = Math.min(game.level.length * TILE - 100, Math.max(100, p.x - 200));
   b.vx = lerp(b.vx, (targetX - b.x) * 2, 0.02);
   b.x += b.vx * dt;
-  b.y = H * 0.78 - 120 + Math.sin(b.floatPhase) * 20;
+  
+  // FIXED: Boss floats dynamically across the screen, avoiding the ground.
+  // It hovers between Y=100 and Y=H*0.45, meaning it stays well above the pillars.
+  const baseY = H * 0.35;
+  const floatRange = H * 0.1; // Moves up and down by 10% of screen height
+  b.y = baseY + Math.sin(b.floatPhase) * floatRange;
 
   if (b.graceTimer <= 0) {
     b.attackTimer -= dt;
     if (b.attackTimer <= 0) {
       b.attackTimer = b.hp > b.maxHp / 2 ? 1.8 : 1.2;
-      const dx = (p.x + p.w / 2) - (b.x + b.w / 2);
-      const dy = (p.y + p.h / 2) - (b.y + b.h / 2);
+      // Lead the target + faster projectile
+      const speed = 460;
+      const lead = 0.15;
+      const tx = p.x + p.w / 2 + p.vx * lead;
+      const ty = p.y + p.h / 2 + p.vy * lead;
+      const dx = tx - (b.x + b.w / 2);
+      const dy = ty - (b.y + b.h / 2);
       const dist = Math.hypot(dx, dy) || 1;
-      const speed = 380;
       game.bossProjectiles.push({
         x: b.x + b.w / 2,
         y: b.y + b.h / 2,
         vx: (dx / dist) * speed,
         vy: (dy / dist) * speed,
-        life: 3.0,
+        life: 3.5,
         trail: []
       });
       AudioEngine.bossHit();
@@ -1555,15 +1565,22 @@ function updateBoss(dt) {
     }
   }
 
+  // Projectiles use swept collision to ensure they don't tunnel
   for (let i = game.bossProjectiles.length - 1; i >= 0; i--) {
     const pr = game.bossProjectiles[i];
+    const prevX = pr.x, prevY = pr.y;
     pr.x += pr.vx * dt;
     pr.y += pr.vy * dt;
     pr.life -= dt;
     pr.trail.push({ x: pr.x, y: pr.y });
     if (pr.trail.length > 8) pr.trail.shift();
 
-    const prBox = { x: pr.x - 8, y: pr.y - 8, w: 16, h: 16 };
+    const sweptX = Math.min(prevX, pr.x) - 14;
+    const sweptY = Math.min(prevY, pr.y) - 14;
+    const sweptW = Math.abs(pr.x - prevX) + 28;
+    const sweptH = Math.abs(pr.y - prevY) + 28;
+    const prBox = { x: sweptX, y: sweptY, w: sweptW, h: sweptH };
+
     if (!game.invincibilityTimer && !game.invulnTimer) {
       if (rectsOverlap(pBox, prBox)) {
         killPlayer();
@@ -1669,7 +1686,7 @@ function renderBoss() {
 }
 
 // ============================================================
-//  PLAYER UPDATE
+//  PLAYER UPDATE (FIXED: snappy flight)
 // ============================================================
 function updatePlayer(dt) {
   const p = game.player;
@@ -1705,15 +1722,17 @@ function updatePlayer(dt) {
   if (game.keys.ArrowRight || game.keys.d) { moveX = 1; p.facing = 1; }
   if (game.hz.curse > 0 && moveX !== 0) { moveX = -moveX; p.facing = moveX; }
 
-  const accel = p.onGround || game.flying ? 0.35 : 0.22;
+  // Snappy acceleration when flying
+  const accel = game.flying ? 0.45 : (p.onGround ? 0.35 : 0.22);
   p.vx = lerp(p.vx, moveX * speed, accel);
 
   if (game.flying) {
-    p.vy = 0;
-    let moveY = 0;
-    if (game.keys.Space || game.keys.w || game.keys.ArrowUp) moveY -= 1;
-    if (game.keys.s || game.keys.ArrowDown) moveY += 1;
-    p.vy = lerp(p.vy, moveY * FLY_SPEED, 0.25);
+    let targetVy = 0;
+    if (game.keys.Space || game.keys.w || game.keys.ArrowUp) targetVy = -FLY_SPEED;
+    if (game.keys.s || game.keys.ArrowDown) targetVy = FLY_DOWN_SPEED; // FIXED: Super fast dive
+    
+    // Snappy vertical lerp
+    p.vy = lerp(p.vy, targetVy, 0.4);
     p.y += p.vy * dt;
     p.y = clamp(p.y, 0, H * 0.78 - p.h);
 
@@ -2639,8 +2658,8 @@ function respawn() {
     } else {
       game.boss.hp = game.boss.maxHp;
       game.boss.hitFlash = 0;
-      game.boss.attackTimer = 4.5;
-      game.boss.graceTimer = 2.0;
+      game.boss.attackTimer = 2.2;
+      game.boss.graceTimer = 1.2;
       game.boss.x = game.level.length * TILE - 300;
       game.boss.vx = 0;
     }

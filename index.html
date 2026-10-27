@@ -4950,6 +4950,304 @@ game.bestTimes = Leaderboard.load();
 updateHUD();
 updateTimerHUD();
 requestAnimationFrame(loop);
+  // ============================================================
+//  ÆTHERA EXPANSION v4 — paste this block just above the final </script>
+//  Adds: 5 new traps, 4 new gems, 8 character powers (Q key),
+//  3 procedural Gauntlet levels, medals (Bronze/Silver/Gold).
+// ============================================================
+const X = { cd: 0, dash: 0, dashSpd: 0, speed: 0, magnet: 0, freeze: 0, dark: 0,
+            gems: [], next: 10, meteors: [], spikes: [], webs: [], wisps: [] };
+
+// ---------- CHARACTER POWERS (press Q / ✦ button) ----------
+const POWERS = {
+  adventurer: { n: 'LANTERN WARD', cd: 12, fn(p) {
+    let c = 0;
+    for (const h of game.hiddenTraps) if (!h.triggered && Math.abs(h.x - p.x) < TILE * 8) { h.disarmed = true; c++; }
+    spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 30, '#ffdd44'); toast('WARD SEALED ' + c + ' HIDDEN TRAPS'); } },
+  saiyan: { n: 'KI DASH', cd: 9, fn(p) {
+    X.dash = 0.4; X.dashSpd = p.facing * 1000; game.invulnTimer = Math.max(game.invulnTimer, 0.8);
+    spawnBurst(p.x, p.y + 20, 25, '#ffe855'); } },
+  ninja: { n: 'SHADOW STEP', cd: 7, fn(p) {
+    const solids = getSolidTiles();
+    for (let d = 5; d >= 1; d--) {
+      const b = { x: p.x + p.facing * d * TILE, y: p.y, w: p.w, h: p.h };
+      if (!solids.some(s => rectsOverlap(b, s))) { spawnBurst(p.x, p.y, 20, '#ff5a5a'); p.x = clamp(b.x, 0, game.level.length * TILE - p.w); break; }
+    }
+    game.invulnTimer = Math.max(game.invulnTimer, 0.6); spawnBurst(p.x, p.y, 20, '#ff5a5a'); } },
+  mage: { n: 'TIME FREEZE', cd: 14, fn() { X.freeze = 4; flashScreen('#a07aff', 0.5); } },
+  ranger: { n: 'EAGLE LEAP', cd: 5, fn(p) {
+    p.vy = -1250; p.onGround = false; spawnBurst(p.x + p.w / 2, p.y + p.h, 20, '#8affc0'); } },
+  knight: { n: 'AEGIS', cd: 15, fn() {
+    game.invulnTimer = Math.max(game.invulnTimer, 3); flashScreen('#ffe8a0', 0.5); } },
+  ghost: { n: 'SOUL PULL', cd: 12, fn(p) {
+    for (const f of game.level.fragments) if (Math.hypot(f.x * TILE - p.x, f.y * TILE - p.y) < TILE * 11) { f.x = (p.x + p.w / 2) / TILE; f.y = (p.y + p.h / 2) / TILE; }
+    game.invulnTimer = Math.max(game.invulnTimer, 2); } },
+  robot: { n: 'EMP PULSE', cd: 13, fn(p) {
+    game.rocks = []; game.darts = []; game.lasers = []; game.bossProjectiles = [];
+    game.hz.bolts = []; game.hz.boulders = []; game.hz.bats = []; game.hz.geysers = [];
+    X.meteors = []; X.spikes = []; X.wisps = [];
+    if (game.boss) game.boss.attackTimer += 3;
+    spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 50, '#ff8a8a'); flashScreen('#ff5a5a', 0.5); } }
+};
+
+function usePower() {
+  if (!game.running || game.paused || game.respawnTimer > 0 || X.cd > 0 || !game.player) return;
+  const P = POWERS[activeChar.id] || POWERS.adventurer;
+  P.fn(game.player); X.cd = P.cd; AudioEngine.gem(); toast(P.n + '!');
+}
+window.addEventListener('keydown', e => { if (e.key.toLowerCase() === 'q' && !e.repeat) usePower(); });
+
+// ---------- GEMS ----------
+const GEMS = {
+  heart:  { c: '#ff5a8a', s: '♥', msg: 'EXTRA LIFE!' },
+  speed:  { c: '#ffe855', s: '»', msg: 'HASTE! (7s)' },
+  freeze: { c: '#8ad4ff', s: '❄', msg: 'TIME SLOWS — HAZARDS CRAWL (5s)' },
+  magnet: { c: '#c8a0ff', s: '◎', msg: 'FRAGMENT MAGNET (8s)' }
+};
+function gemTick(dt, p) {
+  if (game.time >= X.next && X.gems.length < 2) {
+    for (let k = 0; k < 8; k++) {
+      const tx = clamp(Math.floor(p.x / TILE) + Math.floor(rand(5, 16)), 3, game.level.length - 4);
+      if (!groundAtCol(tx)) continue;
+      const keys = game.lives < 5 ? ['heart', 'speed', 'freeze', 'magnet'] : ['speed', 'freeze', 'magnet'];
+      X.gems.push({ x: tx + 0.5, y: rand(6.2, 8), type: keys[Math.floor(Math.random() * keys.length)], life: 22 });
+      break;
+    }
+    X.next = game.time + rand(14, 22);
+  }
+  for (let i = X.gems.length - 1; i >= 0; i--) {
+    const g = X.gems[i]; g.life -= dt;
+    const gx = g.x * TILE, gy = g.y * TILE;
+    if (rectsOverlap({ x: p.x, y: p.y, w: p.w, h: p.h }, { x: gx - 22, y: gy - 22, w: 44, h: 44 })) {
+      if (g.type === 'heart') game.lives = Math.min(5, game.lives + 1);
+      if (g.type === 'speed') X.speed = 7;
+      if (g.type === 'freeze') X.freeze = 5;
+      if (g.type === 'magnet') X.magnet = 8;
+      spawnBurst(gx, gy, 30, GEMS[g.type].c); toast(GEMS[g.type].msg); AudioEngine.gem(); updateHUD();
+      X.gems.splice(i, 1);
+    } else if (g.life <= 0) X.gems.splice(i, 1);
+  }
+}
+
+// ---------- NEW TRAPS: meteor, spikewave, web, wisp, blackout ----------
+const _tnt = triggerNewTrap;
+triggerNewTrap = function (ht) {
+  const p = game.player, gy = 10 * TILE, pc = p.x + p.w / 2;
+  if (ht.type === 'meteor') {
+    for (let i = 0; i < 6; i++) X.meteors.push({ x: pc + (i - 2.5) * 95 + rand(-25, 25), y: -40, t: 0, warn: 0.8 + i * 0.22 });
+    toast('METEOR SHOWER — WATCH THE MARKS!'); return true;
+  }
+  if (ht.type === 'spikewave') {
+    const c0 = Math.floor(pc / TILE) + 2;
+    for (let i = 0; i < 7; i++) if (groundAtCol(c0 + i)) X.spikes.push({ x: (c0 + i) * TILE, t: -i * 0.22 });
+    toast('SPIKES ERUPT AHEAD!'); return true;
+  }
+  if (ht.type === 'web') { X.webs.push({ x: ht.x - TILE, w: 4 * TILE, life: 14 }); toast('STICKY WEB — YOU SLOW DOWN'); return true; }
+  if (ht.type === 'wisp') {
+    X.wisps.push({ x: pc + 9 * TILE, y: 3 * TILE, vx: 0, vy: 0, life: 7 }); toast('A HUNTING WISP AWAKENS!'); return true;
+  }
+  if (ht.type === 'blackout') { X.dark = 4.5; toast('THE LIGHTS DIE...'); return true; }
+  return _tnt(ht);
+};
+
+function updX(dt) {
+  const p = game.player; if (!p) return;
+  const sh = game.invincibilityTimer > 0 || game.invulnTimer > 0, gy = 10 * TILE;
+  const pb = { x: p.x + 4, y: p.y + 4, w: p.w - 8, h: p.h - 8 };
+  for (let i = X.meteors.length - 1; i >= 0; i--) {
+    const m = X.meteors[i]; m.t += dt;
+    if (m.t > m.warn) {
+      m.y += 850 * dt;
+      if (!sh && rectsOverlap(pb, { x: m.x - 16, y: m.y - 16, w: 32, h: 32 })) killPlayer();
+      if (m.y >= gy) { spawnBurst(m.x, gy, 12, '#ff8a3a'); X.meteors.splice(i, 1); }
+    }
+  }
+  for (let i = X.spikes.length - 1; i >= 0; i--) {
+    const s = X.spikes[i]; s.t += dt;
+    if (s.t > 0.55 && s.t < 1.25 && !sh && rectsOverlap(pb, { x: s.x + 6, y: gy - 42, w: TILE - 12, h: 42 })) killPlayer();
+    if (s.t >= 1.3) X.spikes.splice(i, 1);
+  }
+  for (let i = X.webs.length - 1; i >= 0; i--) if ((X.webs[i].life -= dt) <= 0) X.webs.splice(i, 1);
+  for (let i = X.wisps.length - 1; i >= 0; i--) {
+    const w = X.wisps[i]; w.life -= dt;
+    const dx = p.x + p.w / 2 - w.x, dy = p.y + p.h / 2 - w.y, d = Math.hypot(dx, dy) || 1;
+    w.vx = lerp(w.vx, dx / d * 175, 0.04); w.vy = lerp(w.vy, dy / d * 175, 0.04);
+    w.x += w.vx * dt; w.y += w.vy * dt;
+    if (!sh && rectsOverlap(pb, { x: w.x - 13, y: w.y - 13, w: 26, h: 26 })) { killPlayer(); X.wisps.splice(i, 1); continue; }
+    if (w.life <= 0) X.wisps.splice(i, 1);
+  }
+}
+
+function drawX() {
+  const gy = 10 * TILE, T = game.time;
+  ctx.save();
+  for (const w of X.webs) {
+    ctx.strokeStyle = 'rgba(230,240,255,0.55)'; ctx.lineWidth = 1.5;
+    for (let i = 0; i <= 8; i++) { ctx.beginPath(); ctx.moveTo(w.x + i * w.w / 8, gy - 2); ctx.lineTo(w.x + w.w / 2, gy - 38); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(230,240,255,0.12)'; ctx.fillRect(w.x, gy - 38, w.w, 38);
+  }
+  for (const m of X.meteors) {
+    if (m.t <= m.warn) {
+      const pl = 0.5 + Math.sin(T * 25) * 0.5;
+      ctx.strokeStyle = `rgba(255,90,60,${0.3 + pl * 0.5})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(m.x, gy - 2, 14 + pl * 6, 0, 7); ctx.stroke();
+    } else {
+      const g = ctx.createRadialGradient(m.x, m.y, 2, m.x, m.y, 30);
+      g.addColorStop(0, '#fff2b0'); g.addColorStop(0.4, '#ff8a3a'); g.addColorStop(1, 'rgba(255,60,20,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(m.x, m.y, 30, 0, 7); ctx.fill();
+      ctx.fillStyle = 'rgba(255,120,40,0.35)'; ctx.fillRect(m.x - 6, m.y - 90, 12, 90);
+    }
+  }
+  for (const s of X.spikes) {
+    if (s.t < 0) continue;
+    if (s.t < 0.55) { ctx.fillStyle = `rgba(255,60,60,${0.4 + Math.sin(T * 30) * 0.3})`; ctx.fillRect(s.x + 8, gy - 4, TILE - 16, 4); }
+    else if (s.t < 1.25) {
+      ctx.fillStyle = '#c0c8d8'; ctx.strokeStyle = '#ff3030'; ctx.lineWidth = 1.5;
+      for (let k = 0; k < 3; k++) { const sx = s.x + 4 + k * 14; ctx.beginPath(); ctx.moveTo(sx, gy); ctx.lineTo(sx + 7, gy - 42); ctx.lineTo(sx + 14, gy); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    }
+  }
+  for (const w of X.wisps) {
+    const g = ctx.createRadialGradient(w.x, w.y, 2, w.x, w.y, 34);
+    g.addColorStop(0, '#fff'); g.addColorStop(0.35, '#a0f0ff'); g.addColorStop(1, 'rgba(160,100,255,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(w.x, w.y, 34 + Math.sin(T * 10) * 3, 0, 7); ctx.fill();
+  }
+  for (const g of X.gems) {
+    const gx = g.x * TILE, gyy = g.y * TILE + Math.sin(T * 3 + g.x) * 5, c = GEMS[g.type].c;
+    const gl = ctx.createRadialGradient(gx, gyy, 4, gx, gyy, 46);
+    gl.addColorStop(0, c); gl.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = 0.5; ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(gx, gyy, 46, 0, 7); ctx.fill();
+    ctx.globalAlpha = g.life < 4 ? 0.4 + Math.sin(T * 14) * 0.4 : 1;
+    ctx.fillStyle = c; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(gx, gyy - 16); ctx.lineTo(gx + 12, gyy); ctx.lineTo(gx, gyy + 16); ctx.lineTo(gx - 12, gyy); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#05060f'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(GEMS[g.type].s, gx, gyy + 5);
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+function darkX() {
+  if (X.dark <= 0 || !game.player) return;
+  const p = game.player, cx = p.x + p.w / 2, cy = p.y + p.h / 2, a = Math.min(1, X.dark) * 0.94;
+  ctx.save();
+  const g = ctx.createRadialGradient(cx, cy, 70, cx, cy, 300);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${a})`);
+  ctx.fillStyle = g; ctx.fillRect(game.camera.x - 10, -10, W + 20, H + 20);
+  ctx.restore();
+}
+
+// ---------- HOOKS INTO YOUR EXISTING GAME ----------
+const _up = updatePlayer;
+updatePlayer = function (dt) {
+  const p = game.player;
+  if (!p || game.paused) return _up(dt);
+  X.cd = Math.max(0, X.cd - dt); X.speed = Math.max(0, X.speed - dt); X.magnet = Math.max(0, X.magnet - dt);
+  X.freeze = Math.max(0, X.freeze - dt); X.dark = Math.max(0, X.dark - dt);
+  if (X.dash > 0) { X.dash -= dt; p.vx = X.dashSpd; }
+  const sdt = X.speed > 0 ? dt * 1.3 : dt;
+  _up(sdt);
+  if (X.webs.some(w => p.onGround && p.x + p.w > w.x && p.x < w.x + w.w)) p.x -= p.vx * sdt * 0.5;
+  if (X.magnet > 0) for (const f of game.level.fragments) {
+    const dx = p.x + p.w / 2 - f.x * TILE, dy = p.y + p.h / 2 - f.y * TILE, d = Math.hypot(dx, dy);
+    if (d < TILE * 8 && d > 1) { f.x += dx / d * 340 * dt / TILE; f.y += dy / d * 340 * dt / TILE; }
+  }
+  gemTick(dt, p);
+};
+const _uh = updateHazards;      updateHazards = function (dt) { const f = X.freeze > 0 ? 0.25 : 1; _uh(dt * f); updX(dt * f); };
+const _uht = updateHiddenTraps; updateHiddenTraps = function (dt) { _uht(dt * (X.freeze > 0 ? 0.25 : 1)); };
+const _ub = updateBoss;         updateBoss = function (dt) { _ub(dt * (X.freeze > 0 ? 0.25 : 1)); };
+const _dp = drawPlayer;         drawPlayer = function (c) { drawX(); _dp(c); darkX(); };
+const _rh = resetHazards;       resetHazards = function () { _rh(); X.meteors = []; X.spikes = []; X.webs = []; X.wisps = []; X.dark = 0; X.dash = 0; };
+const _ll = loadLevel;          loadLevel = function (i) { _ll(i); X.gems = []; X.speed = X.magnet = X.freeze = 0; X.next = game.time + 8; };
+const _rg = restartGame;        restartGame = function () { X.cd = 0; _rg(); };
+const _uhud = updateHUD;
+updateHUD = function () {
+  _uhud(); let h = ''; const n = Math.max(3, game.lives);
+  for (let i = 0; i < n; i++) h += i < game.lives ? '♥' : '♡';
+  document.getElementById('hudLives').textContent = h;
+};
+const _cl = completeLevel;
+completeLevel = function () {
+  const t = game.levelTime, r = t / game.level.length, boss = game.level.isBoss;
+  _cl(); if (boss) return;
+  const m = r < 0.2 ? '🥇 GOLD' : r < 0.3 ? '🥈 SILVER' : r < 0.45 ? '🥉 BRONZE' : null;
+  if (m) document.getElementById('msgSub').textContent += ' · ' + m + ' MEDAL';
+};
+
+// ---------- NEW HIDDEN-TRAP PLACEMENT ----------
+function addNewTraps(lv, idx) {
+  let s = 777 + idx * 53;
+  const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  const types = lv.isBoss ? ['meteor', 'wisp'] : ['meteor', 'spikewave', 'web', 'wisp', 'blackout'];
+  const radius = { meteor: 5, spikewave: 3, web: 4, wisp: 5, blackout: 4 };
+  const want = lv.isBoss ? 2 : Math.min(7, 2 + Math.floor(idx / 2) + (idx >= 11 ? 1 : 0));
+  const cp = lv.checkpoint ? lv.checkpoint.x : -999, spots = [], used = [];
+  for (const p of lv.platforms) {
+    if (p.type !== 'g' || p.y !== 10 || p.w < 2) continue;
+    const cx = p.x + Math.floor(p.w / 2);
+    if (cx >= 12 && cx <= lv.portal.x - 4 && Math.abs(cx - cp) >= 7) spots.push(cx);
+  }
+  let n = 0, guard = 0;
+  while (n < want && spots.length && guard++ < 200) {
+    const cx = spots[Math.floor(rnd() * spots.length)];
+    if (used.some(u => Math.abs(u - cx) < 7) || lv.hiddenTraps.some(h => Math.abs(h.x - cx) < 2)) continue;
+    const type = types[(n + idx) % types.length];
+    lv.hiddenTraps.push({ type, x: cx, y: 9, triggerRadius: radius[type] });
+    used.push(cx); n++;
+  }
+}
+
+// ---------- GAUNTLET LEVELS (3 procedural, harder, inserted before final boss) ----------
+function genGauntlet(n) {
+  let s = 900 + n * 131;
+  const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  const len = 110 + n * 12, pl = [{ x: 0, y: 10, w: 5, h: 3, type: 'g' }], tr = [], hid = [], floats = [];
+  let x = 5;
+  while (x < len - 14) {
+    const gap = 3 + Math.floor(rnd() * 2), w = 3 + Math.floor(rnd() * 3);
+    const fy = 6 + Math.floor(rnd() * 2);
+    pl.push({ x: x + Math.floor(gap / 2) - 1, y: fy + 1, w: 2, h: 1, type: 'p' });
+    floats.push({ x: x + Math.floor(gap / 2) - 1, y: fy + 1 });
+    x += gap; pl.push({ x, y: 10, w, h: 3, type: 'g' });
+    const r = rnd();
+    if (r < 0.34) tr.push({ type: 'spike', x: x + 1, y: 9, w: 1 + Math.floor(rnd() * 2), h: 1 });
+    else if (r < 0.67) tr.push({ type: 'fire', x: x + 1, y: 9, w: 1, h: 1 });
+    else if (w >= 4) tr.push({ type: 'saw', x: x + 1, y: 8, w: 1, h: 1, range: [x, x + w - 1] });
+    if (rnd() < 0.5) hid.push({ type: ['rockfall', 'collapse', 'dart', 'laser'][Math.floor(rnd() * 4)], x: x + 1, y: 9, triggerRadius: 5 });
+    x += w;
+  }
+  pl.push({ x: x + 3, y: 10, w: 8, h: 3, type: 'g' });
+  const th = [LEVELS[3].theme, LEVELS[6].theme, LEVELS[7].theme][n];
+  const fr = [0.2, 0.5, 0.8].map(k => floats[Math.floor(floats.length * k)]).map(f => ({ x: f.x + 1, y: f.y - 1.2 }));
+  const lv = buildLevel({ name: 'GAUNTLET ' + ['I', 'II', 'III'][n], season: ['AUTUMN', 'WINTER', 'SUMMER'][n],
+    sub: 'LEVEL ' + (12 + n) + ' / 15', theme: th, platforms: pl, traps: tr, hiddenTraps: hid, fragments: fr,
+    portal: { x: x + 8, y: 8 }, length: x + 12 });
+  return lv;
+}
+(function () {
+  LEVELS.forEach(lv => { lv.sub = lv.sub.replace('/ 12', '/ 15'); });
+  const g = [0, 1, 2].map(genGauntlet);
+  g.forEach((lv, k) => { lv.checkpoint = pickSafeCheckpoint(lv); clearCheckpointZone(lv); addExtraTraps(lv, 12 + k); });
+  LEVELS.splice(LEVELS.length - 1, 0, ...g);
+  LEVELS.forEach((lv, i) => addNewTraps(lv, i));
+})();
+
+// ---------- UI: power HUD, hint, mobile button ----------
+const xh = document.createElement('div');
+xh.className = 'pill';
+xh.style.cssText = 'position:fixed;top:104px;left:4%;z-index:10;pointer-events:none;flex-wrap:wrap;max-width:60vw';
+document.body.appendChild(xh);
+setInterval(() => {
+  const P = POWERS[activeChar.id] || POWERS.adventurer;
+  let h = `<span class="dot" style="background:#c8a0ff;box-shadow:0 0 8px #c8a0ff"></span> ${P.n} <b>${X.cd > 0 ? Math.ceil(X.cd) + 's' : 'READY [Q]'}</b>`;
+  if (X.speed > 0) h += ` · HASTE <b>${Math.ceil(X.speed)}s</b>`;
+  if (X.magnet > 0) h += ` · MAGNET <b>${Math.ceil(X.magnet)}s</b>`;
+  if (X.freeze > 0) h += ` · SLOW <b>${Math.ceil(X.freeze)}s</b>`;
+  xh.innerHTML = h; xh.style.display = game.running ? 'flex' : 'none';
+}, 100);
+document.querySelector('.controls').insertAdjacentHTML('beforeend', '<span><kbd>Q</kbd> POWER</span>');
+const mp = document.createElement('button');
+mp.id = 'mPower'; mp.textContent = '✦'; mp.style.borderColor = 'rgba(200,160,255,.7)'; mp.style.color = '#c8a0ff';
+mp.addEventListener('pointerdown', e => { e.preventDefault(); usePower(); });
+document.querySelector('#mobile .right-group').prepend(mp);
 </script>
 </body>
 </html>

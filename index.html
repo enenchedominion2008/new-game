@@ -348,7 +348,7 @@ body {
   </div>
   <div class="hud-right">
     <div class="weather-label"><span class="weather-icon" id="weatherIcon">☀</span> <span id="weatherState">CLEAR</span></div>
-    <div class="weather-sub" id="seasonSub">LEVEL 1 / 15</div>
+    <div class="weather-sub" id="seasonSub">LEVEL 1 / 18</div>
   </div>
 </div>
 
@@ -433,7 +433,7 @@ body {
 
 // ============================================================
 //  ÆTHERA — Adventurer of the Seasons
-//  v5.0 — Mysteries & Legends: Unique Powers, New Traps, Extra Levels
+//  v6.1 — Refined Corruption, Mystical Spirit, Smoother Perf
 // ============================================================
 
 const canvas = document.getElementById('world');
@@ -483,9 +483,7 @@ const AudioEngine = (() => {
         master = ac.createGain();
         master.gain.value = muted ? 0 : 0.45;
         master.connect(ac.destination);
-      } catch (e) {
-        return false;
-      }
+      } catch (e) { return false; }
     }
     if (ac.state === 'suspended') ac.resume();
     return true;
@@ -502,10 +500,8 @@ const AudioEngine = (() => {
     g.gain.linearRampToValueAtTime(gain, t + 0.02);
     g.gain.setValueAtTime(gain, t + duration * 0.7);
     g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-    osc.connect(g);
-    g.connect(master);
-    osc.start(t);
-    osc.stop(t + duration + 0.05);
+    osc.connect(g); g.connect(master);
+    osc.start(t); osc.stop(t + duration + 0.05);
   }
 
   function chord(freqs, duration, type = 'triangle', gain = 0.08, when = 0) {
@@ -517,32 +513,24 @@ const AudioEngine = (() => {
     jump() {
       if (!ensureCtx()) return;
       const t = ac.currentTime;
-      const osc = ac.createOscillator();
-      const g = ac.createGain();
+      const osc = ac.createOscillator(); const g = ac.createGain();
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(523, t);
       osc.frequency.exponentialRampToValueAtTime(880, t + 0.12);
       g.gain.setValueAtTime(0.12, t);
       g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
-      osc.connect(g);
-      g.connect(master);
-      osc.start(t);
-      osc.stop(t + 0.2);
+      osc.connect(g); g.connect(master); osc.start(t); osc.stop(t + 0.2);
     },
     land() {
       if (!ensureCtx()) return;
       const t = ac.currentTime;
-      const osc = ac.createOscillator();
-      const g = ac.createGain();
+      const osc = ac.createOscillator(); const g = ac.createGain();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(180, t);
       osc.frequency.exponentialRampToValueAtTime(80, t + 0.08);
       g.gain.setValueAtTime(0.08, t);
       g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
-      osc.connect(g);
-      g.connect(master);
-      osc.start(t);
-      osc.stop(t + 0.12);
+      osc.connect(g); g.connect(master); osc.start(t); osc.stop(t + 0.12);
     },
     fragment() {
       note(1046.5, 0.2, 'sine', 0.1, 0);
@@ -559,23 +547,17 @@ const AudioEngine = (() => {
     death() {
       if (!ensureCtx()) return;
       const t = ac.currentTime;
-      const osc = ac.createOscillator();
-      const g = ac.createGain();
+      const osc = ac.createOscillator(); const g = ac.createGain();
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(400, t);
       osc.frequency.exponentialRampToValueAtTime(100, t + 0.5);
       g.gain.setValueAtTime(0.14, t);
       g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
-      osc.connect(g);
-      g.connect(master);
-      osc.start(t);
-      osc.stop(t + 0.6);
+      osc.connect(g); g.connect(master); osc.start(t); osc.stop(t + 0.6);
     },
     levelComplete() {
       const melody = [523.25, 659.25, 783.99, 1046.5, 1318.5];
-      melody.forEach((f, i) => {
-        note(f, 0.4, 'triangle', 0.14, i * 0.12);
-      });
+      melody.forEach((f, i) => note(f, 0.4, 'triangle', 0.14, i * 0.12));
       setTimeout(() => {
         if (!ac) return;
         chord([523.25, 659.25, 783.99, 1046.5], 1.2, 'triangle', 0.08);
@@ -584,33 +566,25 @@ const AudioEngine = (() => {
     bossHit() {
       if (!ensureCtx()) return;
       const t = ac.currentTime;
-      const osc = ac.createOscillator();
-      const g = ac.createGain();
+      const osc = ac.createOscillator(); const g = ac.createGain();
       osc.type = 'square';
       osc.frequency.setValueAtTime(220, t);
       osc.frequency.exponentialRampToValueAtTime(110, t + 0.15);
       g.gain.setValueAtTime(0.18, t);
       g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
-      osc.connect(g);
-      g.connect(master);
-      osc.start(t);
-      osc.stop(t + 0.2);
+      osc.connect(g); g.connect(master); osc.start(t); osc.stop(t + 0.2);
     },
     bossRoar() {
       if (!ensureCtx()) return;
       const t = ac.currentTime;
       [55, 82.5, 110].forEach((freq, i) => {
-        const osc = ac.createOscillator();
-        const g = ac.createGain();
+        const osc = ac.createOscillator(); const g = ac.createGain();
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(freq, t);
         osc.frequency.exponentialRampToValueAtTime(freq * 0.7, t + 0.7);
         g.gain.setValueAtTime(0.1 - i * 0.03, t);
         g.gain.exponentialRampToValueAtTime(0.0001, t + 0.8);
-        osc.connect(g);
-        g.connect(master);
-        osc.start(t);
-        osc.stop(t + 0.85);
+        osc.connect(g); g.connect(master); osc.start(t); osc.stop(t + 0.85);
       });
     },
     secretFound() {
@@ -1434,7 +1408,7 @@ function getAllLevelPlatforms() {
 function getSolidTiles() {
   const tiles = [];
   for (const p of getAllLevelPlatforms()) {
-    if (p.invisible) continue; // Phantom Floor – no collision
+    if (p.invisible) continue;
     for (let dx = 0; dx < p.w; dx++) {
       for (let dy = 0; dy < p.h; dy++) {
         const key = (p.x + dx) + ',' + (p.y + dy);
@@ -1469,7 +1443,7 @@ function shouldActivateCheckpoint(px) {
 }
 
 // ============================================================
-//  BOSS (FIXED: floats above pillars, aggressive beams)
+//  BOSS (floats above pillars, aggressive beams)
 // ============================================================
 function spawnBoss() {
   if (!game.level || !game.level.isBoss) return;
@@ -1683,7 +1657,7 @@ function renderBoss() {
 }
 
 // ============================================================
-//  PLAYER UPDATE (FIXED: snappy flight)
+//  PLAYER UPDATE (snappy flight)
 // ============================================================
 function updatePlayer(dt) {
   const p = game.player;
@@ -1963,7 +1937,7 @@ function checkSecretReward() {
 
 
 // ============================================================
-//  NEW HIDDEN TRAPS: geyser, boulder, thunderstrike, cursed rune, bat swarm
+//  NEW HIDDEN TRAPS
 // ============================================================
 function groundAtCol(col) {
   for (const p of game.level.platforms) {
@@ -2600,7 +2574,7 @@ function killPlayer() {
 }
 
 // ============================================================
-//  RESPAWN (BUG FIX: always brings player back)
+//  RESPAWN
 // ============================================================
 function respawn() {
   if (game.secretRoomActive) leaveSecretRoom(false);
@@ -2702,7 +2676,7 @@ function completeLevel() {
 }
 
 // ============================================================
-//  LOAD LEVEL (BUG FIX: deferred boss spawn)
+//  LOAD LEVEL
 // ============================================================
 function loadLevel(index) {
   game.levelIndex = index;
@@ -2906,7 +2880,6 @@ function updateParticles(dt) {
 function render() {
   const theme = game.level ? game.level.theme : LEVELS[0].theme;
 
-  // Rich multi-stop sky
   const sky = ctx.createLinearGradient(0, 0, 0, H);
   const stops = theme.sky;
   if (stops.length >= 5) {
@@ -2924,7 +2897,6 @@ function render() {
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, W, H);
 
-  // Soft horizon glow
   if (theme.glow) {
     const hg = ctx.createRadialGradient(W * 0.5, H * 0.72, 10, W * 0.5, H * 0.72, W * 0.7);
     hg.addColorStop(0, theme.glow + '33');
@@ -2933,7 +2905,6 @@ function render() {
     ctx.fillRect(0, 0, W, H);
   }
 
-  // Atmospheric particles (stars / pollen / embers / crystals)
   const count = theme.embers ? 90 : (theme.crystals ? 70 : 55);
   for (let i = 0; i < count; i++) {
     const speed = theme.embers ? 22 : (theme.leaves ? 12 : 7);
@@ -2949,7 +2920,6 @@ function render() {
   }
   ctx.globalAlpha = 1;
 
-  // Season-specific atmosphere layers
   if (theme.mist || theme.frost) {
     for (let i = 0; i < 5; i++) {
       const my = H * 0.55 + i * 28 + Math.sin(game.time * 0.4 + i) * 12;
@@ -3044,7 +3014,6 @@ function render() {
     }
   }
 
-  // Parallax distant terrain tinted by season
   for (let layer = 0; layer < 3; layer++) {
     const speed = 0.08 + layer * 0.12;
     const offset = -(camX * speed) % 500;
@@ -3059,10 +3028,7 @@ function render() {
     }
     ctx.lineTo(camX + W + 500, H);
     ctx.closePath();
-    // tint from theme ground / sky
     const alpha = 0.22 + layer * 0.14;
-    ctx.fillStyle = theme.ground + Math.floor(alpha * 255).toString(16).padStart(2, '0');
-    // fallback if hex parse fails
     try {
       const g = theme.ground;
       const r = parseInt(g.slice(1,3), 16);
@@ -3076,7 +3042,7 @@ function render() {
   }
 
   for (const p of getAllLevelPlatforms()) {
-    if (p.invisible) continue; // Phantom Floor effect
+    if (p.invisible) continue;
     for (let dx = 0; dx < p.w; dx++) {
       for (let dy = 0; dy < p.h; dy++) {
         const key = (p.x + dx) + ',' + (p.y + dy);
@@ -3588,7 +3554,6 @@ function render() {
     ctx.fillRect(0, 0, W, H);
   }
 
-  // Corruption visual overlay - very obvious
   if (typeof V6 !== 'undefined' && V6.corruption > 0.15) {
     const a = Math.min(0.55, (V6.corruption - 0.15) * 0.65);
     ctx.fillStyle = `rgba(50, 0, 80, ${a})`;
@@ -3646,7 +3611,7 @@ function renderWeather() {
 }
 
 // ============================================================
-//  CHARACTER DRAWING — 8 styles
+//  CHARACTER DRAWING
 // ============================================================
 function drawPlayer(char) {
   const p = game.player;
@@ -3723,20 +3688,6 @@ function drawPlayer(char) {
       ctx.stroke();
     }
     ctx.restore();
-
-    for (let i = 0; i < 2; i++) {
-      if (Math.random() < 0.3) {
-        game.particles.push({
-          x: p.x + p.w / 2 + rand(-8, 8),
-          y: p.y + p.h + rand(-4, 4),
-          vx: rand(-30, 30),
-          vy: rand(20, 60),
-          life: 0.4, maxLife: 0.4,
-          size: rand(1.5, 3),
-          color: '#a0f0ff'
-        });
-      }
-    }
   }
 
   if (p.onGround && !flying) {
@@ -4898,13 +4849,19 @@ function updateProgress() {
 }
 
 // ============================================================
-//  MAIN LOOP
+//  MAIN LOOP (with frame pacing for smoothness)
 // ============================================================
 let lastTime = performance.now();
+let frameAccum = 0;
+const FRAME_TARGET = 1 / 60;
+let rafHandle = null;
 
 function loop(now) {
-  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  rafHandle = requestAnimationFrame(loop);
+  let dt = (now - lastTime) / 1000;
   lastTime = now;
+  // clamp to prevent spiral-of-death on tab resume
+  if (dt > 0.1) dt = 0.1;
 
   if (game.running && !game.paused) {
     game.time += dt;
@@ -4933,8 +4890,6 @@ function loop(now) {
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, W, H);
   }
-
-  requestAnimationFrame(loop);
 }
 
 // ============================================================
@@ -5008,8 +4963,7 @@ document.getElementById('msgBtn').addEventListener('click', () => {
   else if (action === 'restart') restartGame();
   else if (action === 'retryLevel') {
     game.lives = 3;
-    game.deaths += 0; // already counted
-    loadLevel(game.levelIndex); // restart current level from beginning
+    loadLevel(game.levelIndex);
   }
 });
 
@@ -5019,12 +4973,11 @@ document.getElementById('winBtn').addEventListener('click', () => {
 });
 
 // ============================================================
-//  ÆTHERA EXPANSION v5 — MYSTERIES & LEGENDS
-//  - Completely redesigned unique character powers
-//  - New mysterious hidden traps (Echo, Soul Snare, Phantom Floor,
-//    Time Rift, Void Whisper, Cursed Mark)
-//  - Extra levels + harder Gauntlets
-//  - Shadow clones, phase shift, temporary platforms, etc.
+//  ÆTHERA EXPANSION v6 — MYSTERIES & LEGENDS (refined)
+//  - Slow corruption
+//  - Snare/Echo/Spirit no longer drag the real player
+//  - Mystical spirit redesign
+//  - Performance smoothing
 // ============================================================
 const X = {
   cd: 0, dash: 0, dashSpd: 0, speed: 0, magnet: 0, freeze: 0, dark: 0,
@@ -5034,7 +4987,7 @@ const X = {
   snares: [], echos: [], voids: [], marks: []
 };
 
-// ---------- CHARACTER POWERS (press Q / ✦ button) ----------
+// ---------- CHARACTER POWERS ----------
 const POWERS = {
   adventurer: {
     n: 'LANTERN OF REVELATION',
@@ -5054,7 +5007,6 @@ const POWERS = {
       toast(revealed > 0 ? `REVEALED & SEALED ${revealed} HIDDEN DANGERS` : 'THE LIGHT FINDS NOTHING NEAR');
     }
   },
-
   saiyan: {
     n: 'SUPER SAIYAN OVERDRIVE',
     cd: 16,
@@ -5064,7 +5016,6 @@ const POWERS = {
       X.speed = Math.max(X.speed, 9.5);
       game.invulnTimer = Math.max(game.invulnTimer, 2.6);
       game.invincibilityTimer = Math.max(game.invincibilityTimer, 2.3);
-      // Ki trail that damages boss
       for (let i = 0; i < 14; i++) {
         setTimeout(() => {
           if (!game.player) return;
@@ -5087,7 +5038,6 @@ const POWERS = {
       toast('SUPER SAIYAN OVERDRIVE!');
     }
   },
-
   ninja: {
     n: 'SHADOW CLONE JUTSU',
     cd: 11,
@@ -5110,13 +5060,11 @@ const POWERS = {
       toast('SHADOW CLONE DEPLOYED');
     }
   },
-
   mage: {
     n: 'ARCANE DOMINION',
     cd: 15,
     fn(p) {
       X.freeze = 5.8;
-      // Short range teleport
       const solids = getSolidTiles();
       for (let d = 5; d >= 1; d--) {
         const test = { x: p.x + p.facing * d * TILE, y: p.y, w: p.w, h: p.h };
@@ -5125,7 +5073,6 @@ const POWERS = {
           break;
         }
       }
-      // Pull all fragments
       for (const f of game.level.fragments) {
         f.x = (p.x + p.w / 2) / TILE;
         f.y = (p.y + p.h / 2) / TILE;
@@ -5135,7 +5082,6 @@ const POWERS = {
       toast('TIME BENDS TO YOUR WILL');
     }
   },
-
   ranger: {
     n: "NATURE'S GRASP",
     cd: 9,
@@ -5155,35 +5101,25 @@ const POWERS = {
       toast('THE FOREST ANSWERS');
     }
   },
-
   knight: {
     n: 'DIVINE AEGIS',
     cd: 17,
     fn(p) {
-      game.invulnTimer = Math.max(game.invulnTimer, 3.2);       // solid invulnerability
-      game.invincibilityTimer = Math.max(game.invincibilityTimer, 1.6); // shorter flight
-      // Reflect projectiles
-      for (const pr of game.bossProjectiles) {
-        pr.vx *= -1.5;
-        pr.vy *= -1.2;
-      }
-      for (const d of game.darts) {
-        d.vx *= -1.4;
-        d.vy *= -1.15;
-      }
+      game.invulnTimer = Math.max(game.invulnTimer, 3.2);
+      game.invincibilityTimer = Math.max(game.invincibilityTimer, 1.6);
+      for (const pr of game.bossProjectiles) { pr.vx *= -1.5; pr.vy *= -1.2; }
+      for (const d of game.darts) { d.vx *= -1.4; d.vy *= -1.15; }
       flashScreen('#ffe8a0', 0.75);
       spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 50, '#ffe8a0');
       toast('THE SHIELD OF THE ANCIENTS!');
     }
   },
-
   ghost: {
     n: 'SPECTRAL POSSESSION',
     cd: 13,
     fn(p) {
       X.phase = 3.5;
       game.invulnTimer = Math.max(game.invulnTimer, 3.5);
-      // Possess nearest trap
       let nearest = null, best = Infinity;
       for (const h of game.hiddenTraps) {
         if (h.triggered || h.disarmed) continue;
@@ -5201,32 +5137,16 @@ const POWERS = {
       spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 38, '#a0ffb0');
     }
   },
-
   robot: {
     n: 'OVERCLOCK PROTOCOL',
     cd: 14,
     fn(p) {
       X.speed = Math.max(X.speed, 8.5);
       X.magnet = Math.max(X.magnet, 7);
-      // Full EMP
-      game.rocks = [];
-      game.darts = [];
-      game.lasers = [];
-      game.bossProjectiles = [];
-      game.hz.bolts = [];
-      game.hz.boulders = [];
-      game.hz.bats = [];
-      game.hz.geysers = [];
-      X.meteors = [];
-      X.spikes = [];
-      X.wisps = [];
-      X.snares = [];
-      X.echos = [];
-      X.voids = [];
-      if (game.boss) {
-        game.boss.attackTimer += 5;
-        game.boss.hitFlash = 0.9;
-      }
+      game.rocks = []; game.darts = []; game.lasers = []; game.bossProjectiles = [];
+      game.hz.bolts = []; game.hz.boulders = []; game.hz.bats = []; game.hz.geysers = [];
+      X.meteors = []; X.spikes = []; X.wisps = []; X.snares = []; X.echos = []; X.voids = [];
+      if (game.boss) { game.boss.attackTimer += 5; game.boss.hitFlash = 0.9; }
       game.invulnTimer = Math.max(game.invulnTimer, 2.2);
       spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 65, '#ff8a8a');
       flashScreen('#ff5a5a', 0.65);
@@ -5283,7 +5203,7 @@ function gemTick(dt, p) {
   }
 }
 
-// ---------- NEW + MYSTERIOUS TRAPS ----------
+// ---------- MYSTERIOUS TRAPS ----------
 const _tnt = triggerNewTrap;
 triggerNewTrap = function (ht) {
   const p = game.player, gy = 10 * TILE, pc = p.x + p.w / 2;
@@ -5302,24 +5222,28 @@ triggerNewTrap = function (ht) {
   }
   if (ht.type === 'blackout') { X.dark = 4.5; toast('THE LIGHTS DIE...'); return true; }
 
-  // === NEW MYSTERIOUS TRAPS ===
+  // Source snapshot at spawn: don't pull real player
+  const sourceX = p.x;
+  const sourceY = p.y;
+
   if (ht.type === 'echo') {
     X.echos.push({
-      x: p.x, y: p.y, vx: p.facing * 280, life: 4.5, facing: p.facing
+      x: sourceX, y: sourceY, vx: p.facing * 280, life: 4.5, facing: p.facing
     });
     toast('AN ECHO OF YOURSELF WALKS AHEAD...');
     return true;
   }
   if (ht.type === 'soulsnare') {
+    // Locked target = position of the trigger source (not live player)
     X.snares.push({
-      x: p.x + p.w / 2, y: p.y + p.h / 2,
-      tx: p.x - p.facing * 220, life: 1.8
+      sourceX: sourceX, sourceY: sourceY,
+      tx: sourceX - p.facing * 220,
+      t: 0, life: 1.8
     });
     toast('SOUL SNARE — YOU ARE PULLED BACK!');
     return true;
   }
   if (ht.type === 'phantomfloor') {
-    // Mark nearby ground platforms to become invisible after short delay
     const cx = Math.floor(ht.x / TILE);
     for (const plat of game.level.platforms) {
       if (plat.type === 'g' && plat.y === 10 && Math.abs(plat.x + plat.w / 2 - cx) < 4) {
@@ -5330,22 +5254,14 @@ triggerNewTrap = function (ht) {
     toast('THE FLOOR FORGETS ITSELF...');
     return true;
   }
-  if (ht.type === 'timerift') {
-    X.reverse = 3.2;
-    toast('TIME RIFT — CONTROLS REVERSED!');
-    return true;
-  }
+  if (ht.type === 'timerift') { X.reverse = 3.2; toast('TIME RIFT — CONTROLS REVERSED!'); return true; }
   if (ht.type === 'voidwhisper') {
-    X.voids.push({
-      x: ht.x, y: 9 * TILE, r: 3.2 * TILE, life: 8, drain: 0
-    });
+    X.voids.push({ x: ht.x, y: 9 * TILE, r: 3.2 * TILE, life: 8, drain: 0 });
     toast('A VOID WHISPER BEGINS TO FEED...');
     return true;
   }
   if (ht.type === 'cursedmark') {
-    X.marks.push({
-      x: p.x + p.w / 2, y: p.y + p.h / 2, life: 6, pulse: 0
-    });
+    X.marks.push({ x: sourceX, y: sourceY, life: 6, pulse: 0 });
     toast('A CURSED MARK HAS BEEN PLACED ON YOU');
     return true;
   }
@@ -5359,7 +5275,6 @@ function updX(dt) {
   const gy = 10 * TILE;
   const pb = { x: p.x + 4, y: p.y + 4, w: p.w - 8, h: p.h - 8 };
 
-  // Phase (ghost power)
   X.phase = Math.max(0, X.phase - dt);
   X.reverse = Math.max(0, X.reverse - dt);
 
@@ -5427,12 +5342,11 @@ function updX(dt) {
     if (w.life <= 0) X.wisps.splice(i, 1);
   }
 
-  // Echo (fake player that walks forward)
+  // Echo (fake player that walks forward, triggers traps)
   for (let i = X.echos.length - 1; i >= 0; i--) {
     const e = X.echos[i];
     e.life -= dt;
     e.x += e.vx * dt;
-    // Trigger nearby traps as it walks
     for (const h of game.hiddenTraps) {
       if (!h.triggered && Math.abs(h.x - e.x) < TILE * 1.8) {
         h.triggered = true;
@@ -5442,17 +5356,25 @@ function updX(dt) {
     if (e.life <= 0) X.echos.splice(i, 1);
   }
 
-  // Soul Snare (pull player back)
+  // Soul Snare — pulls TOWARD its stored source position, never the live player
+  // (this prevents dragging the real player when a clone triggers it)
   for (let i = X.snares.length - 1; i >= 0; i--) {
     const s = X.snares[i];
-    s.life -= dt;
-    const dx = s.tx - p.x;
-    p.x += dx * 0.18;
-    p.vx *= 0.6;
-    if (s.life <= 0) X.snares.splice(i, 1);
+    s.t += dt;
+    // Only pull if the player is near the SOURCE (i.e., the trap actually
+    // affected this player) AND within a reasonable radius. Otherwise no-op.
+    const dx = s.sourceX - p.x;
+    const dy = s.sourceY - p.y;
+    const d = Math.hypot(dx, dy);
+    if (d < TILE * 3.5) {
+      const pullX = s.tx - p.x;
+      p.x += pullX * 0.18;
+      p.vx *= 0.6;
+    }
+    if (s.t >= s.life) X.snares.splice(i, 1);
   }
 
-  // Void Whisper (drains life if lingering)
+  // Void whisper
   for (let i = X.voids.length - 1; i >= 0; i--) {
     const v = X.voids[i];
     v.life -= dt;
@@ -5474,7 +5396,7 @@ function updX(dt) {
     if (v.life <= 0) X.voids.splice(i, 1);
   }
 
-  // Cursed Mark (periodic damage pulse)
+  // Cursed mark
   for (let i = X.marks.length - 1; i >= 0; i--) {
     const m = X.marks[i];
     m.life -= dt;
@@ -5491,14 +5413,13 @@ function updX(dt) {
     if (m.life <= 0) X.marks.splice(i, 1);
   }
 
-  // Shadow Clones (ninja) — full copy that triggers traps
+  // Shadow Clones — full copy, triggers traps based on its own position
   for (let i = X.clones.length - 1; i >= 0; i--) {
     const c = X.clones[i];
     c.life -= dt;
     c.x += c.vx * dt;
     c.walkPhase += Math.abs(c.vx) * dt * 0.018;
 
-    // Simple gravity so it stays near ground
     const groundY = 9 * TILE;
     if (c.y + c.h < groundY) {
       c.vy += 1800 * dt;
@@ -5510,35 +5431,36 @@ function updX(dt) {
       c.onGround = true;
     }
 
-    // Trigger hidden traps the clone passes near
+    // The clone triggers traps based on its own position — using a
+    // temporary override of game.player so triggerNewTrap stores the
+    // clone's sourceX/sourceY, not the real player's.
     for (const h of game.hiddenTraps) {
       if (h.triggered || h.disarmed || c.triggered.has(h.id)) continue;
-      const hx = (typeof h.x === 'number' && h.x > 100) ? h.x : h.x * TILE;
+      const hx = (h.x > 500) ? h.x : h.x * TILE;
       if (Math.abs(hx - (c.x + c.w / 2)) < TILE * 2.2) {
         h.triggered = true;
         c.triggered.add(h.id);
         if (typeof triggerNewTrap === 'function') {
-          const wasPlayer = game.player;
-          // temporarily pretend the clone is the player position for trap logic
-          const savedX = game.player.x, savedY = game.player.y;
+          const savedX = game.player.x, savedY = game.player.y, savedFacing = game.player.facing;
           game.player.x = c.x;
           game.player.y = c.y;
-          triggerNewTrap(h);
+          game.player.facing = c.facing;
+          try { triggerNewTrap(h); } catch (e) {}
           game.player.x = savedX;
           game.player.y = savedY;
+          game.player.facing = savedFacing;
         }
         spawnBurst(c.x + c.w / 2, c.y + c.h / 2, 12, '#ff5a5a');
       }
     }
 
-    // Also trigger visible traps (spikes / fire) for visual feedback
     for (const t of game.level.traps) {
       const tx = t.x * TILE, ty = t.y * TILE;
       if (rectsOverlap({ x: c.x + 4, y: c.y + 4, w: c.w - 8, h: c.h - 8 },
                        { x: tx, y: ty, w: (t.w || 1) * TILE, h: (t.h || 1) * TILE })) {
         if (!c.hitTaken) {
           c.hitTaken = true;
-          c.life = Math.min(c.life, 0.35); // clone dies shortly after hitting a trap
+          c.life = Math.min(c.life, 0.35);
           spawnBurst(c.x + c.w / 2, c.y + c.h / 2, 18, '#ff5a5a');
         }
       }
@@ -5548,852 +5470,110 @@ function updX(dt) {
   }
 }
 
-function drawX() {
-  const gy = 10 * TILE, T = game.time;
-  ctx.save();
-
-  // Webs
-  for (const w of X.webs) {
-    ctx.strokeStyle = 'rgba(230,240,255,0.55)';
-    ctx.lineWidth = 1.5;
-    for (let i = 0; i <= 8; i++) {
-      ctx.beginPath();
-      ctx.moveTo(w.x + i * w.w / 8, gy - 2);
-      ctx.lineTo(w.x + w.w / 2, gy - 38);
-      ctx.stroke();
-    }
-    ctx.fillStyle = 'rgba(230,240,255,0.12)';
-    ctx.fillRect(w.x, gy - 38, w.w, 38);
-  }
-
-  // Meteors
-  for (const m of X.meteors) {
-    if (m.t <= m.warn) {
-      const pl = 0.5 + Math.sin(T * 25) * 0.5;
-      ctx.strokeStyle = `rgba(255,90,60,${0.3 + pl * 0.5})`;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(m.x, gy - 2, 14 + pl * 6, 0, 7);
-      ctx.stroke();
-    } else {
-      const g = ctx.createRadialGradient(m.x, m.y, 2, m.x, m.y, 30);
-      g.addColorStop(0, '#fff2b0');
-      g.addColorStop(0.4, '#ff8a3a');
-      g.addColorStop(1, 'rgba(255,60,20,0)');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(m.x, m.y, 30, 0, 7);
-      ctx.fill();
-      ctx.fillStyle = 'rgba(255,120,40,0.35)';
-      ctx.fillRect(m.x - 6, m.y - 90, 12, 90);
-    }
-  }
-
-  // Spikes
-  for (const s of X.spikes) {
-    if (s.t < 0) continue;
-    if (s.t < 0.55) {
-      ctx.fillStyle = `rgba(255,60,60,${0.4 + Math.sin(T * 30) * 0.3})`;
-      ctx.fillRect(s.x + 8, gy - 4, TILE - 16, 4);
-    } else if (s.t < 1.25) {
-      ctx.fillStyle = '#c0c8d8';
-      ctx.strokeStyle = '#ff3030';
-      ctx.lineWidth = 1.5;
-      for (let k = 0; k < 3; k++) {
-        const sx = s.x + 4 + k * 14;
-        ctx.beginPath();
-        ctx.moveTo(sx, gy);
-        ctx.lineTo(sx + 7, gy - 42);
-        ctx.lineTo(sx + 14, gy);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-      }
-    }
-  }
-
-  // Wisps
-  for (const w of X.wisps) {
-    const g = ctx.createRadialGradient(w.x, w.y, 2, w.x, w.y, 34);
-    g.addColorStop(0, '#fff');
-    g.addColorStop(0.35, '#a0f0ff');
-    g.addColorStop(1, 'rgba(160,100,255,0)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(w.x, w.y, 34 + Math.sin(T * 10) * 3, 0, 7);
-    ctx.fill();
-  }
-
-  // Echo (semi-transparent clone)
-  for (const e of X.echos) {
-    ctx.globalAlpha = 0.45;
-    ctx.fillStyle = '#a0f0ff';
-    ctx.fillRect(e.x + 6, e.y + 4, 18, 38);
-    ctx.globalAlpha = 1;
-  }
-
-  // Soul Snare lines
-  for (const s of X.snares) {
-    ctx.strokeStyle = 'rgba(180,100,255,0.7)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 4]);
-    ctx.beginPath();
-    ctx.moveTo(s.x, s.y);
-    ctx.lineTo(game.player.x + game.player.w / 2, game.player.y + game.player.h / 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  // Void Whisper
-  for (const v of X.voids) {
-    const pulse = 0.4 + Math.sin(T * 4) * 0.2;
-    const g = ctx.createRadialGradient(v.x, v.y, 10, v.x, v.y, v.r);
-    g.addColorStop(0, `rgba(80,20,140,${0.35 * pulse})`);
-    g.addColorStop(1, 'rgba(40,0,80,0)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(v.x, v.y, v.r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Cursed Mark
-  for (const m of X.marks) {
-    const pulse = 0.5 + Math.sin(T * 8) * 0.4;
-    ctx.strokeStyle = `rgba(255,40,100,${pulse})`;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(m.x, m.y, 22 + Math.sin(T * 6) * 4, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  // Shadow Clones — exact Ninja silhouette
-  for (const c of X.clones) {
-    const alpha = Math.min(0.75, c.life * 0.25 + 0.3);
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.translate(c.x + c.w / 2, c.y + c.h / 2);
-    ctx.scale(c.facing, 1);
-
-    // subtle red shadow aura
-    const aura = ctx.createRadialGradient(0, 0, 0, 0, 0, 36);
-    aura.addColorStop(0, 'rgba(255, 60, 60, 0.35)');
-    aura.addColorStop(1, 'rgba(255, 40, 40, 0)');
-    ctx.fillStyle = aura;
-    ctx.fillRect(-36, -36, 72, 72);
-
-    const legSwing = c.onGround ? Math.sin(c.walkPhase) * 7 : 3;
-    const armSwing = c.onGround ? Math.sin(c.walkPhase + Math.PI) * 6 : -4;
-
-    // legs
-    ctx.strokeStyle = '#1a1a2a';
-    ctx.lineWidth = 5;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(-4, 8); ctx.lineTo(-4 - legSwing, 22);
-    ctx.moveTo(4, 8); ctx.lineTo(4 + legSwing, 22);
-    ctx.stroke();
-
-    // boots
-    ctx.fillStyle = '#0a0a0a';
-    ctx.beginPath(); ctx.ellipse(-4 - legSwing, 24, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(4 + legSwing, 24, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
-
-    // body
-    ctx.fillStyle = '#1a1a2a';
-    ctx.beginPath();
-    ctx.moveTo(-7, -12); ctx.lineTo(7, -12);
-    ctx.lineTo(6, 6); ctx.lineTo(-6, 6);
-    ctx.closePath();
-    ctx.fill();
-
-    // sash
-    ctx.fillStyle = '#c03030';
-    ctx.fillRect(-7, 1, 14, 4);
-
-    // left arm
-    ctx.strokeStyle = '#1a1a2a';
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(0, -8); ctx.lineTo(-8 - armSwing, 2);
-    ctx.stroke();
-    ctx.fillStyle = '#c03030';
-    ctx.beginPath(); ctx.arc(-8 - armSwing, 2, 3, 0, Math.PI * 2); ctx.fill();
-
-    // head (mask)
-    ctx.beginPath();
-    ctx.arc(0, -16, 7, 0, Math.PI * 2);
-    ctx.fillStyle = '#1a1a2a';
-    ctx.fill();
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // mask band
-    ctx.fillStyle = '#c03030';
-    ctx.fillRect(-8, -18, 16, 4);
-
-    // eyes
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(-4.5, -17, 3, 1.5);
-    ctx.fillRect(1.5, -17, 3, 1.5);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(-3.5, -17, 1, 1.5);
-    ctx.fillRect(2.5, -17, 1, 1.5);
-
-    // right arm + kunai
-    ctx.strokeStyle = '#1a1a2a';
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(0, -8); ctx.lineTo(8 + armSwing * 0.5, 2);
-    ctx.stroke();
-    ctx.fillStyle = '#c03030';
-    ctx.beginPath(); ctx.arc(8 + armSwing * 0.5, 2, 3, 0, Math.PI * 2); ctx.fill();
-
-    // kunai
-    const kx = 10 + armSwing * 0.5, ky = 6;
-    ctx.fillStyle = '#c0c8d8';
-    ctx.beginPath();
-    ctx.moveTo(kx, ky - 8); ctx.lineTo(kx + 3, ky); ctx.lineTo(kx - 1, ky + 2);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.restore();
-  }
-
-  // Gems
-  for (const g of X.gems) {
-    const gx = g.x * TILE, gyy = g.y * TILE + Math.sin(T * 3 + g.x) * 5, c = GEMS[g.type].c;
-    const gl = ctx.createRadialGradient(gx, gyy, 4, gx, gyy, 46);
-    gl.addColorStop(0, c);
-    gl.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.globalAlpha = 0.5;
-    ctx.fillStyle = gl;
-    ctx.beginPath();
-    ctx.arc(gx, gyy, 46, 0, 7);
-    ctx.fill();
-    ctx.globalAlpha = g.life < 4 ? 0.4 + Math.sin(T * 14) * 0.4 : 1;
-    ctx.fillStyle = c;
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(gx, gyy - 16);
-    ctx.lineTo(gx + 12, gyy);
-    ctx.lineTo(gx, gyy + 16);
-    ctx.lineTo(gx - 12, gyy);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = '#05060f';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(GEMS[g.type].s, gx, gyy + 5);
-    ctx.globalAlpha = 1;
-  }
-
-  ctx.restore();
-}
-
-function darkX() {
-  if (X.dark <= 0 || !game.player) return;
-  const p = game.player, cx = p.x + p.w / 2, cy = p.y + p.h / 2, a = Math.min(1, X.dark) * 0.94;
-  ctx.save();
-  const g = ctx.createRadialGradient(cx, cy, 70, cx, cy, 300);
-  g.addColorStop(0, 'rgba(0,0,0,0)');
-  g.addColorStop(1, `rgba(0,0,0,${a})`);
-  ctx.fillStyle = g;
-  ctx.fillRect(game.camera.x - 10, -10, W + 20, H + 20);
-  ctx.restore();
-}
-
-// ---------- HOOKS INTO EXISTING GAME ----------
-const _up = updatePlayer;
-updatePlayer = function (dt) {
-  const p = game.player;
-  if (!p || game.paused) return _up(dt);
-
-  X.cd = Math.max(0, X.cd - dt);
-  X.speed = Math.max(0, X.speed - dt);
-  X.magnet = Math.max(0, X.magnet - dt);
-  X.freeze = Math.max(0, X.freeze - dt);
-  X.dark = Math.max(0, X.dark - dt);
-
-  if (X.dash > 0) {
-    X.dash -= dt;
-    p.vx = X.dashSpd;
-  }
-
-  const sdt = X.speed > 0 ? dt * 1.35 : dt;
-  _up(sdt);
-
-  // Webs slow movement
-  if (X.webs.some(w => p.onGround && p.x + p.w > w.x && p.x < w.x + w.w)) {
-    p.x -= p.vx * sdt * 0.55;
-  }
-
-  // Magnet
-  if (X.magnet > 0) {
-    for (const f of game.level.fragments) {
-      const dx = p.x + p.w / 2 - f.x * TILE;
-      const dy = p.y + p.h / 2 - f.y * TILE;
-      const d = Math.hypot(dx, dy);
-      if (d < TILE * 9 && d > 1) {
-        f.x += dx / d * 360 * dt / TILE;
-        f.y += dy / d * 360 * dt / TILE;
-      }
-    }
-  }
-
-  // Phase makes player semi-transparent (handled in draw)
-  gemTick(dt, p);
-};
-
-const _uh = updateHazards;
-updateHazards = function (dt) {
-  const f = X.freeze > 0 ? 0.22 : 1;
-  _uh(dt * f);
-  updX(dt * f);
-};
-
-const _uht = updateHiddenTraps;
-updateHiddenTraps = function (dt) {
-  _uht(dt * (X.freeze > 0 ? 0.22 : 1));
-};
-
-const _ub = updateBoss;
-updateBoss = function (dt) {
-  _ub(dt * (X.freeze > 0 ? 0.22 : 1));
-};
-
-const _dp = drawPlayer;
-drawPlayer = function (c) {
-  drawX();
-  // Phase visual
-  if (X.phase > 0) {
-    ctx.save();
-    ctx.globalAlpha = 0.45 + Math.sin(game.time * 8) * 0.15;
-  }
-  _dp(c);
-  if (X.phase > 0) ctx.restore();
-  darkX();
-};
-
-const _rh = resetHazards;
-resetHazards = function () {
-  _rh();
-  X.meteors = [];
-  X.spikes = [];
-  X.webs = [];
-  X.wisps = [];
-  X.snares = [];
-  X.echos = [];
-  X.voids = [];
-  X.marks = [];
-  X.clones = [];
-  X.dark = 0;
-  X.dash = 0;
-  X.phase = 0;
-  X.reverse = 0;
-};
-
-const _ll = loadLevel;
-loadLevel = function (i) {
-  _ll(i);
-  X.gems = [];
-  X.speed = X.magnet = X.freeze = 0;
-  X.next = game.time + 8;
-  // clear temporary platforms
-  game.secretRoomPlatforms = game.secretRoomPlatforms.filter(p => !p.temporary);
-};
-
-const _rg = restartGame;
-restartGame = function () {
-  X.cd = 0;
-  _rg();
-};
-
-const _uhud = updateHUD;
-updateHUD = function () {
-  _uhud();
-  let h = '';
-  const n = Math.max(3, game.lives);
-  for (let i = 0; i < n; i++) h += i < game.lives ? '♥' : '♡';
-  document.getElementById('hudLives').textContent = h;
-};
-
-const _cl = completeLevel;
-completeLevel = function () {
-  const t = game.levelTime, r = t / game.level.length, boss = game.level.isBoss;
-  _cl();
-  if (boss) return;
-  const m = r < 0.18 ? '🥇 GOLD' : r < 0.28 ? '🥈 SILVER' : r < 0.42 ? '🥉 BRONZE' : null;
-  if (m) document.getElementById('msgSub').textContent += ' · ' + m + ' MEDAL';
-};
-
-// ---------- NEW HIDDEN-TRAP PLACEMENT (more mysterious ones) ----------
-function addNewTraps(lv, idx) {
-  let s = 777 + idx * 53;
-  const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
-  const types = lv.isBoss
-    ? ['meteor', 'wisp', 'voidwhisper']
-    : ['meteor', 'spikewave', 'web', 'wisp', 'blackout', 'echo', 'soulsnare', 'phantomfloor', 'timerift', 'voidwhisper', 'cursedmark'];
-  const radius = {
-    meteor: 5, spikewave: 3, web: 4, wisp: 5, blackout: 4,
-    echo: 4.5, soulsnare: 3.5, phantomfloor: 2.5, timerift: 4,
-    voidwhisper: 5, cursedmark: 3.8
-  };
-  const want = lv.isBoss ? 3 : Math.min(9, 3 + Math.floor(idx / 2) + (idx >= 10 ? 2 : 0));
-  const cp = lv.checkpoint ? lv.checkpoint.x : -999;
-  const spots = [], used = [];
-  for (const p of lv.platforms) {
-    if (p.type !== 'g' || p.y !== 10 || p.w < 2) continue;
-    const cx = p.x + Math.floor(p.w / 2);
-    if (cx >= 12 && cx <= lv.portal.x - 4 && Math.abs(cx - cp) >= 7) spots.push(cx);
-  }
-  let n = 0, guard = 0;
-  while (n < want && spots.length && guard++ < 250) {
-    const cx = spots[Math.floor(rnd() * spots.length)];
-    if (used.some(u => Math.abs(u - cx) < 7) || lv.hiddenTraps.some(h => Math.abs(h.x - cx) < 2)) continue;
-    const type = types[(n + idx) % types.length];
-    lv.hiddenTraps.push({ type, x: cx, y: 9, triggerRadius: radius[type] || 4 });
-    used.push(cx);
-    n++;
-  }
-}
-
-// ---------- GAUNTLET LEVELS (now 4 procedural, harder) ----------
-function genGauntlet(n) {
-  let s = 900 + n * 131;
-  const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
-  const len = 115 + n * 14;
-  const pl = [{ x: 0, y: 10, w: 5, h: 3, type: 'g' }];
-  const tr = [], hid = [], floats = [];
-  let x = 5;
-  while (x < len - 14) {
-    const gap = 3 + Math.floor(rnd() * 2.5);
-    const w = 3 + Math.floor(rnd() * 3.5);
-    const fy = 5 + Math.floor(rnd() * 3);
-    pl.push({ x: x + Math.floor(gap / 2) - 1, y: fy + 1, w: 2, h: 1, type: 'p' });
-    floats.push({ x: x + Math.floor(gap / 2) - 1, y: fy + 1 });
-    x += gap;
-    pl.push({ x, y: 10, w, h: 3, type: 'g' });
-    const r = rnd();
-    if (r < 0.32) tr.push({ type: 'spike', x: x + 1, y: 9, w: 1 + Math.floor(rnd() * 2), h: 1 });
-    else if (r < 0.62) tr.push({ type: 'fire', x: x + 1, y: 9, w: 1, h: 1 });
-    else if (w >= 4) tr.push({ type: 'saw', x: x + 1, y: 8, w: 1, h: 1, range: [x, x + w - 1] });
-    if (rnd() < 0.55) {
-      const ttypes = ['rockfall', 'collapse', 'dart', 'laser', 'echo', 'soulsnare', 'voidwhisper'];
-      hid.push({ type: ttypes[Math.floor(rnd() * ttypes.length)], x: x + 1, y: 9, triggerRadius: 5 });
-    }
-    x += w;
-  }
-  pl.push({ x: x + 3, y: 10, w: 8, h: 3, type: 'g' });
-  const th = [LEVELS[3].theme, LEVELS[6].theme, LEVELS[7].theme, LEVELS[1].theme][n % 4];
-  const fr = [0.18, 0.45, 0.72].map(k => floats[Math.floor(floats.length * k)] || floats[0])
-    .map(f => ({ x: f.x + 1, y: f.y - 1.2 }));
-  const lv = buildLevel({
-    name: 'GAUNTLET ' + ['I', 'II', 'III', 'IV'][n],
-    season: ['AUTUMN', 'WINTER', 'SUMMER', 'SPRING'][n % 4],
-    sub: 'LEVEL ' + (13 + n) + ' / 18',
-    theme: th,
-    platforms: pl,
-    traps: tr,
-    hiddenTraps: hid,
-    fragments: fr,
-    portal: { x: x + 8, y: 8 },
-    length: x + 12
-  });
-  return lv;
-}
-
-(function () {
-  // Update existing sub labels
-  LEVELS.forEach(lv => {
-    lv.sub = lv.sub.replace(/\/ \d+/, '/ 18');
-  });
-
-  // Generate 4 gauntlets
-  const g = [0, 1, 2, 3].map(genGauntlet);
-  g.forEach((lv, k) => {
-    lv.checkpoint = pickSafeCheckpoint(lv);
-    clearCheckpointZone(lv);
-    addExtraTraps(lv, 13 + k);
-  });
-
-  // Insert gauntlets before the final boss
-  LEVELS.splice(LEVELS.length - 1, 0, ...g);
-
-  // Add more mysterious traps to every level
-  LEVELS.forEach((lv, i) => addNewTraps(lv, i));
-})();
-
-// ---------- UI: power HUD, hint, mobile button ----------
-const xh = document.createElement('div');
-xh.className = 'pill';
-xh.style.cssText = 'position:fixed;top:104px;left:4%;z-index:10;pointer-events:none;flex-wrap:wrap;max-width:60vw';
-document.body.appendChild(xh);
-setInterval(() => {
-  const P = POWERS[activeChar.id] || POWERS.adventurer;
-  let h = `<span class="dot" style="background:#c8a0ff;box-shadow:0 0 8px #c8a0ff"></span> ${P.n} <b>${X.cd > 0 ? Math.ceil(X.cd) + 's' : 'READY [Q]'}</b>`;
-  if (X.speed > 0) h += ` · HASTE <b>${Math.ceil(X.speed)}s</b>`;
-  if (X.magnet > 0) h += ` · MAGNET <b>${Math.ceil(X.magnet)}s</b>`;
-  if (X.freeze > 0) h += ` · SLOW <b>${Math.ceil(X.freeze)}s</b>`;
-  if (X.phase > 0) h += ` · PHASE <b>${Math.ceil(X.phase)}s</b>`;
-  if (X.reverse > 0) h += ` · RIFT <b>${Math.ceil(X.reverse)}s</b>`;
-  xh.innerHTML = h;
-  xh.style.display = game.running ? 'flex' : 'none';
-}, 100);
-
-document.querySelector('.controls').insertAdjacentHTML('beforeend', '<span><kbd>Q</kbd> POWER</span>');
-const mp = document.createElement('button');
-mp.id = 'mPower';
-mp.textContent = '✦';
-mp.style.borderColor = 'rgba(200,160,255,.7)';
-mp.style.color = '#c8a0ff';
-mp.addEventListener('pointerdown', e => { e.preventDefault(); usePower(); });
-document.querySelector('#mobile .right-group').prepend(mp);
-
-
 // ============================================================
-//  ÆTHERA v6 — LEGENDS AWAKEN
-//  Ghost Race • Corruption • Character Switch • Boss Rage
-//  Style Combo • Weather Physics • Companion • Story • Juice
+//  MYSTICAL SPIRIT (drawn in game)
 // ============================================================
-
-// ---------- SHARED STATE ----------
-const V6 = {
-  // Ghost race
-  ghost: null,          // { frames: [{x,y,facing,t}], bestTime }
-  recording: [],
-  recordTimer: 0,
-  ghostIdx: 0,
-
-  // Corruption
-  corruption: 0,        // 0 → 1
-  corruptionSpawned: 0,
-
-  // Character switch
-  switchCd: 0,
-  switchTimer: 0,
-  originalChar: null,
-  switchChar: null,
-
-  // Style / combo
-  style: 0,
-  styleRank: 'D',
-  styleTimer: 0,
-  airTime: 0,
-  lastStylePop: 0,
-
-  // Companion
-  spirit: null,         // {x,y,vx,vy,mode,life}
-  spiritCd: 0,
-
-  // Boss rage
-  bossPhase: 1,
-
-  // Juice
-  shake: 0,
-  hitstop: 0,
-  slowMo: 1,
-
-  // Story
-  storyShown: new Set()
-};
-
-// ---------- STORY / LORE ----------
-const STORY = {
-  2: { // after Ashen Warden
-    title: 'THE FIRST FALL',
-    text: 'The Ashen Warden was once a guardian of summer’s fire. Corruption twisted its duty into hunger. The seasons themselves begin to fracture…'
-  },
-  5: {
-    title: 'THE FROST AWAKENS',
-    text: 'Winter’s heart has turned black. The Frost Tyrant freezes hope itself. Only those who walk every season can restore the cycle.'
-  },
-  8: {
-    title: 'SHADOWS STIR',
-    text: 'In the dark between autumn and void, something older than the guardians watches. The fragments you collect are pieces of the world’s true name.'
-  },
-  11: {
-    title: 'THE THRESHOLD',
-    text: 'You stand at the edge of the final corruption. The Wanderer who once protected Æthera now seeks to end the cycle forever. Will you become the new guardian… or the last echo?'
-  }
-};
-
-function showStory(levelIndex) {
-  if (V6.storyShown.has(levelIndex) || !STORY[levelIndex]) return;
-  V6.storyShown.add(levelIndex);
-  const s = STORY[levelIndex];
-  game.running = false;
-  document.getElementById('msgTitle').textContent = s.title;
-  document.getElementById('msgSub').textContent = 'A MEMORY SURFACE';
-  document.getElementById('msgFrags').textContent = '—';
-  document.getElementById('msgLives').textContent = '—';
-  document.getElementById('msgTime').textContent = '—';
-  document.getElementById('msgLeaderboard').innerHTML = `<p style="font-size:12px;line-height:1.7;color:#aebbd8;text-align:center;padding:8px 12px">${s.text}</p>`;
-  document.getElementById('msgBtn').textContent = 'CONTINUE';
-  document.getElementById('msgScreen').classList.remove('hidden');
-  document.getElementById('msgScreen').dataset.action = 'next';
-}
-
-// ---------- GHOST RACE ----------
-function startGhostRecording() {
-  V6.recording = [];
-  V6.recordTimer = 0;
-}
-function recordGhostFrame(dt) {
-  if (!game.player || !game.running) return;
-  V6.recordTimer += dt;
-  // record every 0.04s
-  if (V6.recording.length === 0 || V6.recordTimer - V6.recording[V6.recording.length - 1].t >= 0.04) {
-    V6.recording.push({
-      x: game.player.x,
-      y: game.player.y,
-      facing: game.player.facing || 1,
-      t: V6.recordTimer
-    });
-  }
-}
-function saveGhostIfBetter(levelIndex, time) {
-  if (!V6.recording || V6.recording.length < 10) return;
-  const key = 'aethera_ghost_v2_' + levelIndex;
-  try {
-    const existing = localStorage.getItem(key);
-    if (!existing || time < JSON.parse(existing).bestTime) {
-      localStorage.setItem(key, JSON.stringify({
-        bestTime: time,
-        frames: V6.recording.slice()
-      }));
-    }
-  } catch (e) {}
-}
-function loadGhost(levelIndex) {
-  V6.ghost = null;
-  V6.ghostIdx = 0;
-  try {
-    const raw = localStorage.getItem('aethera_ghost_v2_' + levelIndex);
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    if (!data || !Array.isArray(data.frames) || data.frames.length < 10) return;
-    if (typeof data.frames[0].x !== 'number') return;
-    V6.ghost = data;
-    V6.ghostIdx = 0;
-  } catch (e) {
-    V6.ghost = null;
-  }
-}
-function updateRaceGhost(dt) {
-  if (!V6.ghost || !V6.ghost.frames || !V6.ghost.frames.length) return;
-  const frames = V6.ghost.frames;
-  while (V6.ghostIdx < frames.length - 1 && frames[V6.ghostIdx + 1].t <= game.levelTime) {
-    V6.ghostIdx++;
-  }
-}
-function drawRaceGhost() {
-  if (!V6.ghost || !V6.ghost.frames || !V6.ghost.frames.length) return;
-  const f = V6.ghost.frames[Math.min(V6.ghostIdx, V6.ghost.frames.length - 1)];
-  if (!f || typeof f.x !== 'number') return;
-
-  const gx = f.x + 15;
-  const gy = f.y + 23;
+function drawMysticalSpirit() {
+  if (typeof V6 === 'undefined' || !V6.spirit) return;
+  const s = V6.spirit;
+  const T = game.time;
+  const pulse = 0.7 + Math.sin(T * 4) * 0.3;
 
   ctx.save();
-  ctx.globalAlpha = 0.85;
+  ctx.translate(s.x, s.y);
 
-  // bright ring so it is impossible to miss
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 3;
+  // Outer aura — shifting violet/cyan
+  const aura = ctx.createRadialGradient(0, 0, 5, 0, 0, 60);
+  aura.addColorStop(0, `rgba(160, 220, 255, ${0.35 * pulse})`);
+  aura.addColorStop(0.45, `rgba(160, 100, 255, ${0.22 * pulse})`);
+  aura.addColorStop(1, 'rgba(80, 40, 160, 0)');
+  ctx.fillStyle = aura;
   ctx.beginPath();
-  ctx.arc(gx, gy - 8, 28, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.strokeStyle = '#72f7ff';
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.arc(gx, gy - 8, 32, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // body
-  ctx.fillStyle = '#72f7ff';
-  ctx.beginPath();
-  ctx.arc(gx, gy - 20, 10, 0, Math.PI * 2);
+  ctx.arc(0, 0, 60, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillRect(gx - 9, gy - 12, 18, 22);
 
-  // legs
-  ctx.strokeStyle = '#72f7ff';
-  ctx.lineWidth = 5;
+  // Crescent arc — wisps of light forming a moon
+  ctx.save();
+  ctx.rotate(T * 0.8);
+  ctx.strokeStyle = `rgba(200, 240, 255, ${0.55 * pulse})`;
+  ctx.lineWidth = 3;
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(gx - 5, gy + 10); ctx.lineTo(gx - 8, gy + 26);
-  ctx.moveTo(gx + 5, gy + 10); ctx.lineTo(gx + 8, gy + 26);
+  ctx.arc(0, 0, 22, Math.PI * 0.15, Math.PI * 1.1);
   ctx.stroke();
-
-  // label
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 12px Inter, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('BEST RUN', gx, gy - 38);
-
+  ctx.strokeStyle = `rgba(180, 140, 255, ${0.45 * pulse})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, 27, Math.PI * 1.15, Math.PI * 1.9);
+  ctx.stroke();
   ctx.restore();
-}
 
-// ---------- CORRUPTION METER ----------
-function updateCorruption(dt) {
-  if (!game.level || game.level.isBoss || !game.running) return;
-
-  // fills in about 50-70 seconds on a normal level
-  V6.corruption = Math.min(1, V6.corruption + (0.02 + game.levelTime * 0.00015) * dt);
-
-  // visual is continuous via overlay in render()
-
-  if (V6.corruption >= 0.25 && V6.corruptionSpawned < 1) {
-    V6.corruptionSpawned = 1;
-    toast('CORRUPTION RISING — 25%');
-    forceCorruptionEvent('mild');
-  }
-  if (V6.corruption >= 0.50 && V6.corruptionSpawned < 2) {
-    V6.corruptionSpawned = 2;
-    toast('CORRUPTION 50% — STORM COMES');
-    forceCorruptionEvent('medium');
-  }
-  if (V6.corruption >= 0.75 && V6.corruptionSpawned < 3) {
-    V6.corruptionSpawned = 3;
-    toast('CORRUPTION 75% — THE GROUND BREAKS');
-    forceCorruptionEvent('heavy');
-  }
-  if (V6.corruption >= 1.0) {
-    if (V6.corruptionSpawned < 4) {
-      V6.corruptionSpawned = 4;
-      toast('100% CORRUPTION — SURVIVE!');
-      forceCorruptionEvent('max');
-    }
-    // continuous pressure
-    if (!V6._corrTimer) V6._corrTimer = 0;
-    V6._corrTimer += dt;
-    if (V6._corrTimer > 3.0) {
-      V6._corrTimer = 0;
-      forceCorruptionEvent('tick');
-    }
-  }
-}
-
-function forceCorruptionEvent(level) {
-  if (!game.player) return;
-  const p = game.player;
-  // always force storm weather
-  game.weather = 'storm';
-  if (typeof updateWeatherUI === 'function') updateWeatherUI();
-  game.lightningFlash = 0.5;
-  if (typeof addShake === 'function') addShake(level === 'max' ? 1.0 : 0.4);
-  if (typeof flashScreen === 'function') flashScreen('#5a00aa', level === 'max' ? 0.9 : 0.35);
-
-  // spawn meteors that are already in the X.meteors system (visible + deadly)
-  const count = level === 'max' ? 8 : level === 'heavy' ? 5 : level === 'medium' ? 3 : level === 'tick' ? 2 : 1;
-  for (let i = 0; i < count; i++) {
-    const mx = p.x + (i - count / 2) * 90 + (Math.random() - 0.5) * 40;
-    if (typeof X !== 'undefined' && X.meteors) {
-      X.meteors.push({
-        x: mx,
-        y: -50 - i * 30,
-        t: 0,
-        warn: 0.5 + i * 0.15
-      });
-    }
+  // Orbiting stars (3)
+  for (let i = 0; i < 3; i++) {
+    const a = T * 1.6 + i * (Math.PI * 2 / 3);
+    const r = 30 + Math.sin(T * 2 + i) * 4;
+    const sx = Math.cos(a) * r;
+    const sy = Math.sin(a) * r * 0.85;
+    const sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, 8);
+    sg.addColorStop(0, '#ffffff');
+    sg.addColorStop(0.4, '#a0f0ff');
+    sg.addColorStop(1, 'rgba(160, 100, 255, 0)');
+    ctx.fillStyle = sg;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(sx, sy, 1.8, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  // also drop spike waves ahead
-  if (level === 'heavy' || level === 'max' || level === 'tick') {
-    if (typeof X !== 'undefined' && X.spikes) {
-      const c0 = Math.floor(p.x / TILE) + 3;
-      for (let i = 0; i < 5; i++) {
-        X.spikes.push({ x: (c0 + i) * TILE, t: -i * 0.15 });
-      }
-    }
+  // Wispy trailing tail (3 fading droplets)
+  for (let i = 0; i < 3; i++) {
+    const t = i * 0.15;
+    const tx = -8 - i * 4;
+    const ty = 12 + i * 5 + Math.sin(T * 3 + i) * 2;
+    const tr = 6 - i * 1.6;
+    const tg = ctx.createRadialGradient(tx, ty, 0, tx, ty, tr);
+    tg.addColorStop(0, `rgba(220, 200, 255, ${0.5 - t})`);
+    tg.addColorStop(1, 'rgba(160, 100, 255, 0)');
+    ctx.fillStyle = tg;
+    ctx.beginPath();
+    ctx.arc(tx, ty, tr, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  // particle burst for feedback
-  for (let i = 0; i < 20; i++) {
-    game.particles.push({
-      x: p.x + (Math.random() - 0.5) * 200,
-      y: p.y + (Math.random() - 0.5) * 100,
-      vx: (Math.random() - 0.5) * 200,
-      vy: (Math.random() - 0.5) * 200,
-      life: 0.8, maxLife: 0.8,
-      size: 2 + Math.random() * 3,
-      color: '#a07aff'
-    });
-  }
-}
+  // Core (white-hot center)
+  const core = ctx.createRadialGradient(0, 0, 0, 0, 0, 12);
+  core.addColorStop(0, '#ffffff');
+  core.addColorStop(0.5, '#d0f8ff');
+  core.addColorStop(1, 'rgba(160, 100, 255, 0)');
+  ctx.fillStyle = core;
+  ctx.beginPath();
+  ctx.arc(0, 0, 12 + Math.sin(T * 5) * 2, 0, Math.PI * 2);
+  ctx.fill();
 
-function spawnCorruptionTrap() {
-  forceCorruptionEvent('tick');
-}
-
-// ---------- CHARACTER SWITCH (hold R or button) ----------
-function tryCharacterSwitch() {
-  if (V6.switchCd > 0 || V6.switchTimer > 0 || !game.player) return;
-  // cycle to next character
-  const idx = CHARACTERS.findIndex(c => c.id === activeChar.id);
-  const next = CHARACTERS[(idx + 1) % CHARACTERS.length];
-  V6.originalChar = activeChar;
-  V6.switchChar = next;
-  activeChar = next;
-  V6.switchTimer = 3.8;
-  V6.switchCd = 14;
-  spawnBurst(game.player.x + game.player.w / 2, game.player.y + game.player.h / 2, 25, '#c8a0ff');
-  toast('FORM SHIFT → ' + next.name);
-  AudioEngine.gem();
-}
-function updateCharacterSwitch(dt) {
-  V6.switchCd = Math.max(0, V6.switchCd - dt);
-  if (V6.switchTimer > 0) {
-    V6.switchTimer -= dt;
-    if (V6.switchTimer <= 0 && V6.originalChar) {
-      activeChar = V6.originalChar;
-      V6.originalChar = null;
-      V6.switchChar = null;
-      toast('FORM RESTORED');
-    }
-  }
-}
-
-// ---------- STYLE / COMBO ----------
-function addStyle(amount, reason) {
-  V6.style = Math.min(100, V6.style + amount);
-  V6.styleTimer = 2.8;
-  V6.lastStylePop = game.time;
-  updateStyleRank();
-}
-function updateStyle(dt) {
-  if (!game.player) return;
-  if (!game.player.onGround) V6.airTime += dt;
-  else {
-    if (V6.airTime > 1.2) addStyle(8, 'long air');
-    V6.airTime = 0;
-  }
-  V6.styleTimer -= dt;
-  if (V6.styleTimer <= 0) {
-    V6.style = Math.max(0, V6.style - 18 * dt);
-  }
-  updateStyleRank();
-}
-function updateStyleRank() {
-  const s = V6.style;
-  V6.styleRank = s >= 90 ? 'SS' : s >= 75 ? 'S' : s >= 55 ? 'A' : s >= 35 ? 'B' : s >= 15 ? 'C' : 'D';
-}
-function drawStyleHUD() {
-  if (V6.style < 5) return;
+  // Rune halo
   ctx.save();
-  ctx.globalAlpha = 0.85;
-  ctx.font = 'bold 14px Cinzel, serif';
-  ctx.fillStyle = V6.styleRank === 'SS' || V6.styleRank === 'S' ? '#ffe1a0' : '#72f7ff';
-  ctx.textAlign = 'right';
-  ctx.fillText(V6.styleRank + '  ' + Math.floor(V6.style), W - 24, 110);
+  ctx.rotate(-T * 0.6);
+  ctx.strokeStyle = `rgba(200, 240, 255, ${0.35 * pulse})`;
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 6; i++) {
+    const a = i * (Math.PI * 2 / 6);
+    const r1 = 16, r2 = 20;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1);
+    ctx.lineTo(Math.cos(a) * r2, Math.sin(a) * r2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
   ctx.restore();
 }
 
-// ---------- COMPANION SPIRIT ----------
+// ============================================================
+//  SPIRIT LOGIC (simplified)
+// ============================================================
 function spawnSpirit() {
   if (!game.player) return;
   if (V6.spiritCd > 0 && V6.spirit) return;
@@ -6406,7 +5586,6 @@ function spawnSpirit() {
   };
   V6.spiritCd = 12;
   toast('SPIRIT SUMMONED — PRESS F TO SEND');
-  // visible spawn burst
   for (let i = 0; i < 15; i++) {
     game.particles.push({
       x: V6.spirit.x, y: V6.spirit.y,
@@ -6429,7 +5608,6 @@ function updateSpirit(dt) {
     return;
   }
 
-  // pull fragments near spirit
   if (game.level && game.level.fragments) {
     for (const f of game.level.fragments) {
       const fx = f.x * TILE, fy = f.y * TILE;
@@ -6437,7 +5615,6 @@ function updateSpirit(dt) {
       if (d < 70 && d > 1) {
         f.x += (s.x - fx) / d * 8 * dt;
         f.y += (s.y - fy) / d * 8 * dt;
-        // if very close, snap to player
         if (d < 30) {
           f.x = (game.player.x + game.player.w / 2) / TILE;
           f.y = (game.player.y + game.player.h / 2) / TILE;
@@ -6452,10 +5629,10 @@ function updateSpirit(dt) {
     s.x += (tx - s.x) * 6 * dt;
     s.y += (ty - s.y) * 6 * dt;
   } else {
-    // send mode - fly forward
     s.x += (game.player.facing || 1) * 420 * dt;
     s.y += Math.sin(game.time * 6) * 20 * dt;
-    // trigger traps near spirit
+    // Trigger traps from spirit's position — again with source snapshot,
+    // so the real player is never dragged
     if (game.hiddenTraps) {
       for (const h of game.hiddenTraps) {
         if (h.triggered || h.disarmed) continue;
@@ -6463,7 +5640,13 @@ function updateSpirit(dt) {
         if (Math.abs(hx - s.x) < 80) {
           h.triggered = true;
           if (typeof triggerNewTrap === 'function') {
+            const savedX = game.player.x, savedY = game.player.y, savedFacing = game.player.facing;
+            game.player.x = s.x;
+            game.player.y = s.y;
             try { triggerNewTrap(h); } catch (e) {}
+            game.player.x = savedX;
+            game.player.y = savedY;
+            game.player.facing = savedFacing;
           }
         }
       }
@@ -6489,46 +5672,149 @@ function sendSpirit() {
     toast('SPIRIT RECALLED');
   }
 }
-function drawSpirit() {
-  if (!V6.spirit) return;
-  const s = V6.spirit;
-  const pulse = 0.75 + Math.sin(game.time * 8) * 0.25;
 
-  ctx.save();
-  // outer glow - very visible
-  ctx.globalAlpha = pulse;
-  ctx.fillStyle = 'rgba(100, 220, 255, 0.35)';
-  ctx.beginPath();
-  ctx.arc(s.x, s.y, 40, 0, Math.PI * 2);
-  ctx.fill();
+// ============================================================
+//  V6 STATE — slower corruption, style, story
+// ============================================================
+const V6 = {
+  corruption: 0,
+  corruptionSpawned: 0,
+  style: 0,
+  styleRank: 'D',
+  styleTimer: 0,
+  airTime: 0,
+  ghost: null,
+  ghostIdx: 0,
+  recording: [],
+  recordTimer: 0,
+  bossPhase: 1,
+  spirit: null,
+  spiritCd: 0,
+  switchTimer: 0,
+  switchCd: 0,
+  originalChar: null,
+  switchChar: null,
+  storyShown: new Set(),
+  shake: 0,
+  hitstop: 0,
+  slowMo: 1
+};
 
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.arc(s.x, s.y, 10, 0, Math.PI * 2);
-  ctx.fill();
+const STORY = {
+  2: { title: 'THE FIRST FALL', text: 'The Ashen Warden was once a guardian of summer’s fire. Corruption twisted its duty into hunger. The seasons themselves begin to fracture…' },
+  5: { title: 'THE FROST AWAKENS', text: 'Winter’s heart has turned black. The Frost Tyrant freezes hope itself. Only those who walk every season can restore the cycle.' },
+  8: { title: 'SHADOWS STIR', text: 'In the dark between autumn and void, something older than the guardians watches. The fragments you collect are pieces of the world’s true name.' },
+  11: { title: 'THE THRESHOLD', text: 'You stand at the edge of the final corruption. The Wanderer who once protected Æthera now seeks to end the cycle forever. Will you become the new guardian… or the last echo?' }
+};
 
-  ctx.fillStyle = '#72f7ff';
-  ctx.beginPath();
-  ctx.arc(s.x, s.y, 6, 0, Math.PI * 2);
-  ctx.fill();
+// Corruption slower: ~100-130s to fill
+function updateCorruption(dt) {
+  if (!game.level || game.level.isBoss || !game.running) return;
+  V6.corruption = Math.min(1, V6.corruption + (0.0075 + game.levelTime * 0.00004) * dt);
 
-  // ring
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(s.x, s.y, 16 + Math.sin(game.time * 5) * 3, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // label
-  ctx.fillStyle = '#a0f0ff';
-  ctx.font = 'bold 11px Inter, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(s.mode === 'send' ? '>>>' : 'SPIRIT', s.x, s.y - 28);
-  ctx.restore();
+  if (V6.corruption >= 0.25 && V6.corruptionSpawned < 1) {
+    V6.corruptionSpawned = 1;
+    toast('CORRUPTION RISING — 25%');
+    forceCorruptionEvent('mild');
+  }
+  if (V6.corruption >= 0.50 && V6.corruptionSpawned < 2) {
+    V6.corruptionSpawned = 2;
+    toast('CORRUPTION 50% — STORM COMES');
+    forceCorruptionEvent('medium');
+  }
+  if (V6.corruption >= 0.75 && V6.corruptionSpawned < 3) {
+    V6.corruptionSpawned = 3;
+    toast('CORRUPTION 75% — THE GROUND BREAKS');
+    forceCorruptionEvent('heavy');
+  }
+  if (V6.corruption >= 1.0 && V6.corruptionSpawned < 4) {
+    V6.corruptionSpawned = 4;
+    toast('100% CORRUPTION — SURVIVE!');
+    forceCorruptionEvent('max');
+  }
 }
 
-// ---------- BOSS RAGE PHASES ----------
+function forceCorruptionEvent(level) {
+  if (!game.player) return;
+  const p = game.player;
+  game.weather = 'storm';
+  if (typeof updateWeatherUI === 'function') updateWeatherUI();
+  game.lightningFlash = 0.5;
+  if (typeof addShake === 'function') addShake(level === 'max' ? 1.0 : 0.4);
+  if (typeof flashScreen === 'function') flashScreen('#5a00aa', level === 'max' ? 0.9 : 0.35);
+
+  const count = level === 'max' ? 8 : level === 'heavy' ? 5 : level === 'medium' ? 3 : 1;
+  for (let i = 0; i < count; i++) {
+    const mx = p.x + (i - count / 2) * 90 + (Math.random() - 0.5) * 40;
+    X.meteors.push({ x: mx, y: -50 - i * 30, t: 0, warn: 0.5 + i * 0.15 });
+  }
+  if (level === 'heavy' || level === 'max') {
+    const c0 = Math.floor(p.x / TILE) + 3;
+    for (let i = 0; i < 5; i++) X.spikes.push({ x: (c0 + i) * TILE, t: -i * 0.15 });
+  }
+  for (let i = 0; i < 12; i++) {
+    game.particles.push({
+      x: p.x + (Math.random() - 0.5) * 200,
+      y: p.y + (Math.random() - 0.5) * 100,
+      vx: (Math.random() - 0.5) * 200,
+      vy: (Math.random() - 0.5) * 200,
+      life: 0.8, maxLife: 0.8,
+      size: 2 + Math.random() * 3,
+      color: '#a07aff'
+    });
+  }
+}
+
+function updateCharacterSwitch(dt) {
+  V6.switchCd = Math.max(0, V6.switchCd - dt);
+  if (V6.switchTimer > 0) {
+    V6.switchTimer -= dt;
+    if (V6.switchTimer <= 0 && V6.originalChar) {
+      activeChar = V6.originalChar;
+      V6.originalChar = null;
+      V6.switchChar = null;
+      toast('FORM RESTORED');
+    }
+  }
+}
+function tryCharacterSwitch() {
+  if (V6.switchCd > 0 || V6.switchTimer > 0 || !game.player) return;
+  const idx = CHARACTERS.findIndex(c => c.id === activeChar.id);
+  const next = CHARACTERS[(idx + 1) % CHARACTERS.length];
+  V6.originalChar = activeChar;
+  V6.switchChar = next;
+  activeChar = next;
+  V6.switchTimer = 3.8;
+  V6.switchCd = 14;
+  spawnBurst(game.player.x + game.player.w / 2, game.player.y + game.player.h / 2, 25, '#c8a0ff');
+  toast('FORM SHIFT → ' + next.name);
+  AudioEngine.gem();
+}
+
+function addStyle(amount) {
+  V6.style = Math.min(100, V6.style + amount);
+  V6.styleTimer = 2.8;
+  updateStyleRank();
+}
+function updateStyle(dt) {
+  if (!game.player) return;
+  if (!game.player.onGround) V6.airTime += dt;
+  else {
+    if (V6.airTime > 1.2) addStyle(8);
+    V6.airTime = 0;
+  }
+  V6.styleTimer -= dt;
+  if (V6.styleTimer <= 0) V6.style = Math.max(0, V6.style - 18 * dt);
+  updateStyleRank();
+}
+function updateStyleRank() {
+  const s = V6.style;
+  V6.styleRank = s >= 90 ? 'SS' : s >= 75 ? 'S' : s >= 55 ? 'A' : s >= 35 ? 'B' : s >= 15 ? 'C' : 'D';
+}
+
+// ============================================================
+//  Boss Rage phases
+// ============================================================
 function updateBossRage() {
   if (!game.boss || game.boss.dead) return;
   const b = game.boss;
@@ -6538,7 +5824,6 @@ function updateBossRage() {
     b.attackTimer = 0.6;
     toast('THE GUARDIAN ENTERS RAGE');
     flashScreen('#ff2a6a', 0.8);
-    // spawn extra lasers / hazards
     for (let i = 0; i < 3; i++) {
       game.hiddenTraps.push({
         id: 8000 + i, type: 'laser',
@@ -6555,7 +5840,6 @@ function updateBossRage() {
     toast('FINAL RAGE — THE ARENA SHATTERS');
     flashScreen('#ff1040', 1.0);
     V6.shake = 1.2;
-    // collapse some platforms visually by adding collapse timers
     for (const p of game.level.platforms) {
       if (p.type === 'p' && Math.random() < 0.45) {
         const key = p.x + ',' + p.y;
@@ -6565,103 +5849,152 @@ function updateBossRage() {
   }
 }
 
-// ---------- WEATHER PHYSICS ----------
-function applyWeatherPhysics(p, dt) {
-  if (!p) return;
-  if (game.weather === 'rain' || game.weather === 'storm') {
-    // slippery
-    p.vx *= 0.985;
-    if (p.onGround && Math.abs(p.vx) > 50) p.vx += (p.vx > 0 ? 1 : -1) * 18 * dt;
-  }
-  if (game.weather === 'snow') {
-    p.vx *= 0.92; // slower movement
-  }
-  if (game.weather === 'storm' && Math.random() < 0.002) {
-    // random lightning near player
-    if (game.invulnTimer <= 0 && game.invincibilityTimer <= 0) {
-      const lx = p.x + (Math.random() - 0.5) * 200;
-      spawnBurst(lx, 0, 15, '#a0d0ff');
-      game.lightningFlash = 0.35;
-      if (Math.abs(lx - p.x) < 80) {
-        p.vy = -200;
-        toast('LIGHTNING STRIKES!');
-      }
-    }
-  }
-  if (game.weather === 'mist') {
-    // slightly hide distant traps by darkening (already visual)
+// ============================================================
+//  Ghost race
+// ============================================================
+function startGhostRecording() {
+  V6.recording = [];
+  V6.recordTimer = 0;
+}
+function recordGhostFrame(dt) {
+  if (!game.player || !game.running) return;
+  V6.recordTimer += dt;
+  if (V6.recording.length === 0 || V6.recordTimer - V6.recording[V6.recording.length - 1].t >= 0.04) {
+    V6.recording.push({
+      x: game.player.x,
+      y: game.player.y,
+      facing: game.player.facing || 1,
+      t: V6.recordTimer
+    });
   }
 }
+function saveGhostIfBetter(levelIndex, time) {
+  if (!V6.recording || V6.recording.length < 10) return;
+  try {
+    const key = 'aethera_ghost_v2_' + levelIndex;
+    const existing = localStorage.getItem(key);
+    if (!existing || time < JSON.parse(existing).bestTime) {
+      localStorage.setItem(key, JSON.stringify({ bestTime: time, frames: V6.recording.slice() }));
+    }
+  } catch (e) {}
+}
+function loadGhost(levelIndex) {
+  V6.ghost = null;
+  V6.ghostIdx = 0;
+  try {
+    const raw = localStorage.getItem('aethera_ghost_v2_' + levelIndex);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.frames) || data.frames.length < 10) return;
+    V6.ghost = data;
+    V6.ghostIdx = 0;
+  } catch (e) {
+    V6.ghost = null;
+  }
+}
+function updateRaceGhost() {
+  if (!V6.ghost || !V6.ghost.frames || !V6.ghost.frames.length) return;
+  const frames = V6.ghost.frames;
+  while (V6.ghostIdx < frames.length - 1 && frames[V6.ghostIdx + 1].t <= game.levelTime) {
+    V6.ghostIdx++;
+  }
+}
+function drawRaceGhost() {
+  if (!V6.ghost || !V6.ghost.frames || !V6.ghost.frames.length) return;
+  const f = V6.ghost.frames[Math.min(V6.ghostIdx, V6.ghost.frames.length - 1)];
+  if (!f || typeof f.x !== 'number') return;
+  const gx = f.x + 15;
+  const gy = f.y + 23;
 
-// ---------- JUICE ----------
+  ctx.save();
+  ctx.globalAlpha = 0.85;
+
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(gx, gy - 8, 28, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#72f7ff';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(gx, gy - 8, 32, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.fillStyle = '#72f7ff';
+  ctx.beginPath();
+  ctx.arc(gx, gy - 20, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(gx - 9, gy - 12, 18, 22);
+
+  ctx.strokeStyle = '#72f7ff';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(gx - 5, gy + 10); ctx.lineTo(gx - 8, gy + 26);
+  ctx.moveTo(gx + 5, gy + 10); ctx.lineTo(gx + 8, gy + 26);
+  ctx.stroke();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 12px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('BEST RUN', gx, gy - 38);
+
+  ctx.restore();
+}
+
+// ============================================================
+//  Juice
+// ============================================================
 function addShake(amount) { V6.shake = Math.max(V6.shake, amount); }
-function addHitstop(frames) { V6.hitstop = Math.max(V6.hitstop, frames); }
-
 function updateJuice(dt) {
   V6.shake = Math.max(0, V6.shake - dt * 2.5);
-  if (V6.hitstop > 0) V6.hitstop -= dt * 60;
-
-  // near-death slow-mo
-  if (game.lives === 1 && game.running) {
-    V6.slowMo = 0.7;
-  } else {
-    V6.slowMo = 1;
-  }
+  V6.slowMo = game.lives === 1 && game.running ? 0.7 : 1;
 }
 
-// ---------- HOOKS ----------
-const _v6_up = updatePlayer;
+// ============================================================
+//  HOOKS — updatePlayer + drawPlayer wrappers
+// ============================================================
+const _v61_up = updatePlayer;
 updatePlayer = function (dt) {
   const realDt = dt * V6.slowMo;
-  if (V6.hitstop > 0) return; // freeze briefly
-  _v6_up(realDt);
+  _v61_up(realDt);
   recordGhostFrame(realDt);
   updateCorruption(realDt);
   updateCharacterSwitch(realDt);
   updateStyle(realDt);
   updateSpirit(realDt);
   updateBossRage();
-  applyWeatherPhysics(game.player, realDt);
   updateJuice(realDt);
   updateRaceGhost(realDt);
 };
 
-const _v6_dp = drawPlayer;
+const _v61_dp = drawPlayer;
 drawPlayer = function (c) {
-  // camera shake
   if (V6.shake > 0) {
     ctx.save();
     ctx.translate((Math.random() - 0.5) * V6.shake * 14, (Math.random() - 0.5) * V6.shake * 10);
   }
   drawRaceGhost();
-  drawSpirit();
-  _v6_dp(c);
-  drawStyleHUD();
+  drawMysticalSpirit();
+  _v61_dp(c);
   if (V6.shake > 0) ctx.restore();
 };
 
-const _v6_cl = completeLevel;
+const _v61_cl = completeLevel;
 completeLevel = function () {
   saveGhostIfBetter(game.levelIndex, game.levelTime);
-  // style bonus medal flavor
   if (V6.styleRank === 'SS' || V6.styleRank === 'S') {
     setTimeout(() => toast('STYLE RANK ' + V6.styleRank + '!'), 600);
   }
-  _v6_cl();
-  // story after certain levels
-  const next = game.levelIndex + 1;
-  if (STORY[game.levelIndex]) {
-    // delay story until after the normal complete screen is closed
-    // we already show story via showStory when appropriate
-  }
+  _v61_cl();
 };
 
-const _v6_ll = loadLevel;
+const _v61_ll = loadLevel;
 loadLevel = function (i) {
-  _v6_ll(i);
+  _v61_ll(i);
   V6.corruption = 0;
   V6.corruptionSpawned = 0;
-  V6._corrTimer = 0;
   V6.bossPhase = 1;
   V6.style = 0;
   V6.styleRank = 'D';
@@ -6676,38 +6009,9 @@ loadLevel = function (i) {
   V6.recording = [];
   startGhostRecording();
   loadGhost(i);
-  // show story when entering certain story levels (after previous boss)
-  if (STORY[i - 1]) {
-    // story is shown on complete of previous, so here we just continue
-  }
 };
 
-// also show story right after completing the trigger levels
-const _v6_cl2 = completeLevel;
-completeLevel = function () {
-  const idx = game.levelIndex;
-  _v6_cl2();
-  if (STORY[idx]) {
-    // override the normal continue with story first
-    setTimeout(() => {
-      if (!document.getElementById('msgScreen').classList.contains('hidden')) {
-        // inject story into the already open screen
-        const s = STORY[idx];
-        document.getElementById('msgTitle').textContent = s.title;
-        document.getElementById('msgSub').textContent = 'A MEMORY SURFACE';
-        document.getElementById('msgLeaderboard').innerHTML = `<p style="font-size:12px;line-height:1.75;color:#c0c9e4;text-align:center;padding:10px 14px">${s.text}</p>`;
-      }
-    }, 200);
-  }
-};
-
-// Input for character switch (R) and spirit (F)
-window.addEventListener('keydown', e => {
-  if (e.key.toLowerCase() === 'r' && !e.repeat) tryCharacterSwitch();
-  if (e.key.toLowerCase() === 'f' && !e.repeat) sendSpirit();
-});
-
-// Mobile buttons for switch + spirit
+// Extra UI buttons and HUD
 (function () {
   const sw = document.createElement('button');
   sw.textContent = '⇄';
@@ -6724,44 +6028,60 @@ window.addEventListener('keydown', e => {
   document.querySelector('#mobile .right-group').appendChild(sp);
 })();
 
-// Extra controls hint
 document.querySelector('.controls').insertAdjacentHTML('beforeend',
-  '<span><kbd>R</kbd> SWITCH</span><span><kbd>F</kbd> SPIRIT</span>');
+  '<span><kbd>Q</kbd> POWER</span><span><kbd>R</kbd> SWITCH</span><span><kbd>F</kbd> SPIRIT</span>');
 
-// Corruption + style HUD pill
+window.addEventListener('keydown', e => {
+  if (e.key.toLowerCase() === 'r' && !e.repeat) tryCharacterSwitch();
+  if (e.key.toLowerCase() === 'f' && !e.repeat) sendSpirit();
+});
+
+const xh = document.createElement('div');
+xh.className = 'pill';
+xh.style.cssText = 'position:fixed;top:104px;left:4%;z-index:10;pointer-events:none;flex-wrap:wrap;max-width:60vw';
+document.body.appendChild(xh);
+
 const v6hud = document.createElement('div');
 v6hud.className = 'pill';
 v6hud.style.cssText = 'position:fixed;top:140px;left:4%;z-index:10;pointer-events:none;max-width:70vw';
 document.body.appendChild(v6hud);
+
+// Update HUD at 10fps instead of every frame (perf)
 setInterval(() => {
+  const P = POWERS[activeChar.id] || POWERS.adventurer;
+  let h = `<span class="dot" style="background:#c8a0ff;box-shadow:0 0 8px #c8a0ff"></span> ${P.n} <b>${X.cd > 0 ? Math.ceil(X.cd) + 's' : 'READY [Q]'}</b>`;
+  if (X.speed > 0) h += ` · HASTE <b>${Math.ceil(X.speed)}s</b>`;
+  if (X.magnet > 0) h += ` · MAGNET <b>${Math.ceil(X.magnet)}s</b>`;
+  if (X.freeze > 0) h += ` · SLOW <b>${Math.ceil(X.freeze)}s</b>`;
+  if (X.phase > 0) h += ` · PHASE <b>${Math.ceil(X.phase)}s</b>`;
+  if (X.reverse > 0) h += ` · RIFT <b>${Math.ceil(X.reverse)}s</b>`;
+  xh.innerHTML = h;
+  xh.style.display = game.running ? 'flex' : 'none';
+
   if (!game.running) { v6hud.style.display = 'none'; return; }
   v6hud.style.display = 'flex';
-  let h = '';
+  let v = '';
   if (V6.corruption > 0.05) {
     const pct = Math.floor(V6.corruption * 100);
     const col = pct > 70 ? '#ff5a5a' : pct > 40 ? '#ffb347' : '#c8a0ff';
-    h += `<span class="dot" style="background:${col}"></span> CORRUPT <b style="color:${col}">${pct}%</b>`;
+    v += `<span class="dot" style="background:${col}"></span> CORRUPT <b style="color:${col}">${pct}%</b>`;
   }
-  if (V6.style > 8) h += ` · STYLE <b>${V6.styleRank}</b>`;
-  if (V6.switchCd > 0) h += ` · SHIFT <b>${Math.ceil(V6.switchCd)}s</b>`;
-  else if (V6.switchTimer > 0) h += ` · FORM <b>${Math.ceil(V6.switchTimer)}s</b>`;
-  if (V6.spirit) h += ` · SPIRIT`;
-  v6hud.innerHTML = h || '<span class="dot"></span> READY';
+  if (V6.style > 8) v += ` · STYLE <b>${V6.styleRank}</b>`;
+  if (V6.switchCd > 0) v += ` · SHIFT <b>${Math.ceil(V6.switchCd)}s</b>`;
+  else if (V6.switchTimer > 0) v += ` · FORM <b>${Math.ceil(V6.switchTimer)}s</b>`;
+  if (V6.spirit) v += ` · SPIRIT`;
+  v6hud.innerHTML = v || '<span class="dot"></span> READY';
 }, 120);
 
-// Make powers and big events add style + shake
 const _origUsePower = usePower;
 usePower = function () {
   _origUsePower();
-  addStyle(12, 'power');
+  addStyle(12);
   addShake(0.35);
 };
 
-console.log('ÆTHERA v6 systems loaded — Ghost, Corruption, Switch, Rage, Style, Spirit, Story, Juice');
-
-
 // ============================================================
-//  INIT (End of Script)
+//  INIT
 // ============================================================
 game.bestTimes = Leaderboard.load();
 updateHUD();

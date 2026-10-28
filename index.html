@@ -2589,6 +2589,8 @@ function killPlayer() {
   spawnBurst(game.player.x + game.player.w / 2, game.player.y + game.player.h / 2, 30, '#ff5a5a');
   AudioEngine.death();
   flashScreen('#ff2020', 0.7);
+  if (typeof addShake === 'function') addShake(0.7);
+  if (typeof V6 !== 'undefined') V6.style = Math.max(0, V6.style - 25);
   if (game.lives <= 0) gameOver();
   else {
     game.respawnTimer = 1.0;
@@ -2661,15 +2663,15 @@ function respawn() {
 
 function gameOver() {
   game.running = false;
-  document.getElementById('msgTitle').textContent = 'THE ADVENTURE ENDS';
-  document.getElementById('msgSub').textContent = 'DARKNESS CLAIMS YOU';
-  document.getElementById('msgFrags').textContent = game.totalFragments;
+  document.getElementById('msgTitle').textContent = 'YOU HAVE FALLEN';
+  document.getElementById('msgSub').textContent = 'THE REALM STILL AWAITS — TRY THIS LEVEL AGAIN';
+  document.getElementById('msgFrags').textContent = game.fragments;
   document.getElementById('msgLives').textContent = 0;
   document.getElementById('msgTime').textContent = formatTime(game.levelTime);
   document.getElementById('msgLeaderboard').innerHTML = '';
-  document.getElementById('msgBtn').textContent = 'TRY AGAIN';
+  document.getElementById('msgBtn').textContent = 'RETRY LEVEL';
   document.getElementById('msgScreen').classList.remove('hidden');
-  document.getElementById('msgScreen').dataset.action = 'restart';
+  document.getElementById('msgScreen').dataset.action = 'retryLevel';
 }
 
 function completeLevel() {
@@ -3584,6 +3586,23 @@ function render() {
   if (game.lightningFlash > 0) {
     ctx.fillStyle = `rgba(220, 230, 255, ${game.lightningFlash * 0.4})`;
     ctx.fillRect(0, 0, W, H);
+  }
+
+  // Corruption visual overlay - very obvious
+  if (typeof V6 !== 'undefined' && V6.corruption > 0.15) {
+    const a = Math.min(0.55, (V6.corruption - 0.15) * 0.65);
+    ctx.fillStyle = `rgba(50, 0, 80, ${a})`;
+    ctx.fillRect(0, 0, W, H);
+    if (V6.corruption >= 0.75) {
+      const pulse = 0.1 + Math.sin(game.time * 6) * 0.08;
+      ctx.fillStyle = `rgba(140, 20, 200, ${pulse})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+    if (V6.corruption >= 1.0) {
+      const pulse2 = 0.15 + Math.sin(game.time * 8) * 0.1;
+      ctx.fillStyle = `rgba(180, 0, 220, ${pulse2})`;
+      ctx.fillRect(0, 0, W, H);
+    }
   }
 
   if (flashAlpha > 0) {
@@ -4987,6 +5006,11 @@ document.getElementById('msgBtn').addEventListener('click', () => {
   screen.classList.add('hidden');
   if (action === 'next') loadLevel(game.levelIndex + 1);
   else if (action === 'restart') restartGame();
+  else if (action === 'retryLevel') {
+    game.lives = 3;
+    game.deaths += 0; // already counted
+    loadLevel(game.levelIndex); // restart current level from beginning
+  }
 });
 
 document.getElementById('winBtn').addEventListener('click', () => {
@@ -5136,8 +5160,8 @@ const POWERS = {
     n: 'DIVINE AEGIS',
     cd: 17,
     fn(p) {
-      game.invulnTimer = Math.max(game.invulnTimer, 4.5);
-      game.invincibilityTimer = Math.max(game.invincibilityTimer, 3.8);
+      game.invulnTimer = Math.max(game.invulnTimer, 3.2);       // solid invulnerability
+      game.invincibilityTimer = Math.max(game.invincibilityTimer, 1.6); // shorter flight
       // Reflect projectiles
       for (const pr of game.bossProjectiles) {
         pr.vx *= -1.5;
@@ -6027,6 +6051,713 @@ mp.style.borderColor = 'rgba(200,160,255,.7)';
 mp.style.color = '#c8a0ff';
 mp.addEventListener('pointerdown', e => { e.preventDefault(); usePower(); });
 document.querySelector('#mobile .right-group').prepend(mp);
+
+
+// ============================================================
+//  ÆTHERA v6 — LEGENDS AWAKEN
+//  Ghost Race • Corruption • Character Switch • Boss Rage
+//  Style Combo • Weather Physics • Companion • Story • Juice
+// ============================================================
+
+// ---------- SHARED STATE ----------
+const V6 = {
+  // Ghost race
+  ghost: null,          // { frames: [{x,y,facing,t}], bestTime }
+  recording: [],
+  recordTimer: 0,
+  ghostIdx: 0,
+
+  // Corruption
+  corruption: 0,        // 0 → 1
+  corruptionSpawned: 0,
+
+  // Character switch
+  switchCd: 0,
+  switchTimer: 0,
+  originalChar: null,
+  switchChar: null,
+
+  // Style / combo
+  style: 0,
+  styleRank: 'D',
+  styleTimer: 0,
+  airTime: 0,
+  lastStylePop: 0,
+
+  // Companion
+  spirit: null,         // {x,y,vx,vy,mode,life}
+  spiritCd: 0,
+
+  // Boss rage
+  bossPhase: 1,
+
+  // Juice
+  shake: 0,
+  hitstop: 0,
+  slowMo: 1,
+
+  // Story
+  storyShown: new Set()
+};
+
+// ---------- STORY / LORE ----------
+const STORY = {
+  2: { // after Ashen Warden
+    title: 'THE FIRST FALL',
+    text: 'The Ashen Warden was once a guardian of summer’s fire. Corruption twisted its duty into hunger. The seasons themselves begin to fracture…'
+  },
+  5: {
+    title: 'THE FROST AWAKENS',
+    text: 'Winter’s heart has turned black. The Frost Tyrant freezes hope itself. Only those who walk every season can restore the cycle.'
+  },
+  8: {
+    title: 'SHADOWS STIR',
+    text: 'In the dark between autumn and void, something older than the guardians watches. The fragments you collect are pieces of the world’s true name.'
+  },
+  11: {
+    title: 'THE THRESHOLD',
+    text: 'You stand at the edge of the final corruption. The Wanderer who once protected Æthera now seeks to end the cycle forever. Will you become the new guardian… or the last echo?'
+  }
+};
+
+function showStory(levelIndex) {
+  if (V6.storyShown.has(levelIndex) || !STORY[levelIndex]) return;
+  V6.storyShown.add(levelIndex);
+  const s = STORY[levelIndex];
+  game.running = false;
+  document.getElementById('msgTitle').textContent = s.title;
+  document.getElementById('msgSub').textContent = 'A MEMORY SURFACE';
+  document.getElementById('msgFrags').textContent = '—';
+  document.getElementById('msgLives').textContent = '—';
+  document.getElementById('msgTime').textContent = '—';
+  document.getElementById('msgLeaderboard').innerHTML = `<p style="font-size:12px;line-height:1.7;color:#aebbd8;text-align:center;padding:8px 12px">${s.text}</p>`;
+  document.getElementById('msgBtn').textContent = 'CONTINUE';
+  document.getElementById('msgScreen').classList.remove('hidden');
+  document.getElementById('msgScreen').dataset.action = 'next';
+}
+
+// ---------- GHOST RACE ----------
+function startGhostRecording() {
+  V6.recording = [];
+  V6.recordTimer = 0;
+}
+function recordGhostFrame(dt) {
+  if (!game.player || !game.running) return;
+  V6.recordTimer += dt;
+  // record every 0.04s
+  if (V6.recording.length === 0 || V6.recordTimer - V6.recording[V6.recording.length - 1].t >= 0.04) {
+    V6.recording.push({
+      x: game.player.x,
+      y: game.player.y,
+      facing: game.player.facing || 1,
+      t: V6.recordTimer
+    });
+  }
+}
+function saveGhostIfBetter(levelIndex, time) {
+  if (!V6.recording || V6.recording.length < 10) return;
+  const key = 'aethera_ghost_v2_' + levelIndex;
+  try {
+    const existing = localStorage.getItem(key);
+    if (!existing || time < JSON.parse(existing).bestTime) {
+      localStorage.setItem(key, JSON.stringify({
+        bestTime: time,
+        frames: V6.recording.slice()
+      }));
+    }
+  } catch (e) {}
+}
+function loadGhost(levelIndex) {
+  V6.ghost = null;
+  V6.ghostIdx = 0;
+  try {
+    const raw = localStorage.getItem('aethera_ghost_v2_' + levelIndex);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.frames) || data.frames.length < 10) return;
+    if (typeof data.frames[0].x !== 'number') return;
+    V6.ghost = data;
+    V6.ghostIdx = 0;
+  } catch (e) {
+    V6.ghost = null;
+  }
+}
+function updateRaceGhost(dt) {
+  if (!V6.ghost || !V6.ghost.frames || !V6.ghost.frames.length) return;
+  const frames = V6.ghost.frames;
+  while (V6.ghostIdx < frames.length - 1 && frames[V6.ghostIdx + 1].t <= game.levelTime) {
+    V6.ghostIdx++;
+  }
+}
+function drawRaceGhost() {
+  if (!V6.ghost || !V6.ghost.frames || !V6.ghost.frames.length) return;
+  const f = V6.ghost.frames[Math.min(V6.ghostIdx, V6.ghost.frames.length - 1)];
+  if (!f || typeof f.x !== 'number') return;
+
+  const gx = f.x + 15;
+  const gy = f.y + 23;
+
+  ctx.save();
+  ctx.globalAlpha = 0.85;
+
+  // bright ring so it is impossible to miss
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(gx, gy - 8, 28, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#72f7ff';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(gx, gy - 8, 32, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // body
+  ctx.fillStyle = '#72f7ff';
+  ctx.beginPath();
+  ctx.arc(gx, gy - 20, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(gx - 9, gy - 12, 18, 22);
+
+  // legs
+  ctx.strokeStyle = '#72f7ff';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(gx - 5, gy + 10); ctx.lineTo(gx - 8, gy + 26);
+  ctx.moveTo(gx + 5, gy + 10); ctx.lineTo(gx + 8, gy + 26);
+  ctx.stroke();
+
+  // label
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 12px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('BEST RUN', gx, gy - 38);
+
+  ctx.restore();
+}
+
+// ---------- CORRUPTION METER ----------
+function updateCorruption(dt) {
+  if (!game.level || game.level.isBoss || !game.running) return;
+
+  // fills in about 50-70 seconds on a normal level
+  V6.corruption = Math.min(1, V6.corruption + (0.02 + game.levelTime * 0.00015) * dt);
+
+  // visual is continuous via overlay in render()
+
+  if (V6.corruption >= 0.25 && V6.corruptionSpawned < 1) {
+    V6.corruptionSpawned = 1;
+    toast('CORRUPTION RISING — 25%');
+    forceCorruptionEvent('mild');
+  }
+  if (V6.corruption >= 0.50 && V6.corruptionSpawned < 2) {
+    V6.corruptionSpawned = 2;
+    toast('CORRUPTION 50% — STORM COMES');
+    forceCorruptionEvent('medium');
+  }
+  if (V6.corruption >= 0.75 && V6.corruptionSpawned < 3) {
+    V6.corruptionSpawned = 3;
+    toast('CORRUPTION 75% — THE GROUND BREAKS');
+    forceCorruptionEvent('heavy');
+  }
+  if (V6.corruption >= 1.0) {
+    if (V6.corruptionSpawned < 4) {
+      V6.corruptionSpawned = 4;
+      toast('100% CORRUPTION — SURVIVE!');
+      forceCorruptionEvent('max');
+    }
+    // continuous pressure
+    if (!V6._corrTimer) V6._corrTimer = 0;
+    V6._corrTimer += dt;
+    if (V6._corrTimer > 3.0) {
+      V6._corrTimer = 0;
+      forceCorruptionEvent('tick');
+    }
+  }
+}
+
+function forceCorruptionEvent(level) {
+  if (!game.player) return;
+  const p = game.player;
+  // always force storm weather
+  game.weather = 'storm';
+  if (typeof updateWeatherUI === 'function') updateWeatherUI();
+  game.lightningFlash = 0.5;
+  if (typeof addShake === 'function') addShake(level === 'max' ? 1.0 : 0.4);
+  if (typeof flashScreen === 'function') flashScreen('#5a00aa', level === 'max' ? 0.9 : 0.35);
+
+  // spawn meteors that are already in the X.meteors system (visible + deadly)
+  const count = level === 'max' ? 8 : level === 'heavy' ? 5 : level === 'medium' ? 3 : level === 'tick' ? 2 : 1;
+  for (let i = 0; i < count; i++) {
+    const mx = p.x + (i - count / 2) * 90 + (Math.random() - 0.5) * 40;
+    if (typeof X !== 'undefined' && X.meteors) {
+      X.meteors.push({
+        x: mx,
+        y: -50 - i * 30,
+        t: 0,
+        warn: 0.5 + i * 0.15
+      });
+    }
+  }
+
+  // also drop spike waves ahead
+  if (level === 'heavy' || level === 'max' || level === 'tick') {
+    if (typeof X !== 'undefined' && X.spikes) {
+      const c0 = Math.floor(p.x / TILE) + 3;
+      for (let i = 0; i < 5; i++) {
+        X.spikes.push({ x: (c0 + i) * TILE, t: -i * 0.15 });
+      }
+    }
+  }
+
+  // particle burst for feedback
+  for (let i = 0; i < 20; i++) {
+    game.particles.push({
+      x: p.x + (Math.random() - 0.5) * 200,
+      y: p.y + (Math.random() - 0.5) * 100,
+      vx: (Math.random() - 0.5) * 200,
+      vy: (Math.random() - 0.5) * 200,
+      life: 0.8, maxLife: 0.8,
+      size: 2 + Math.random() * 3,
+      color: '#a07aff'
+    });
+  }
+}
+
+function spawnCorruptionTrap() {
+  forceCorruptionEvent('tick');
+}
+
+// ---------- CHARACTER SWITCH (hold R or button) ----------
+function tryCharacterSwitch() {
+  if (V6.switchCd > 0 || V6.switchTimer > 0 || !game.player) return;
+  // cycle to next character
+  const idx = CHARACTERS.findIndex(c => c.id === activeChar.id);
+  const next = CHARACTERS[(idx + 1) % CHARACTERS.length];
+  V6.originalChar = activeChar;
+  V6.switchChar = next;
+  activeChar = next;
+  V6.switchTimer = 3.8;
+  V6.switchCd = 14;
+  spawnBurst(game.player.x + game.player.w / 2, game.player.y + game.player.h / 2, 25, '#c8a0ff');
+  toast('FORM SHIFT → ' + next.name);
+  AudioEngine.gem();
+}
+function updateCharacterSwitch(dt) {
+  V6.switchCd = Math.max(0, V6.switchCd - dt);
+  if (V6.switchTimer > 0) {
+    V6.switchTimer -= dt;
+    if (V6.switchTimer <= 0 && V6.originalChar) {
+      activeChar = V6.originalChar;
+      V6.originalChar = null;
+      V6.switchChar = null;
+      toast('FORM RESTORED');
+    }
+  }
+}
+
+// ---------- STYLE / COMBO ----------
+function addStyle(amount, reason) {
+  V6.style = Math.min(100, V6.style + amount);
+  V6.styleTimer = 2.8;
+  V6.lastStylePop = game.time;
+  updateStyleRank();
+}
+function updateStyle(dt) {
+  if (!game.player) return;
+  if (!game.player.onGround) V6.airTime += dt;
+  else {
+    if (V6.airTime > 1.2) addStyle(8, 'long air');
+    V6.airTime = 0;
+  }
+  V6.styleTimer -= dt;
+  if (V6.styleTimer <= 0) {
+    V6.style = Math.max(0, V6.style - 18 * dt);
+  }
+  updateStyleRank();
+}
+function updateStyleRank() {
+  const s = V6.style;
+  V6.styleRank = s >= 90 ? 'SS' : s >= 75 ? 'S' : s >= 55 ? 'A' : s >= 35 ? 'B' : s >= 15 ? 'C' : 'D';
+}
+function drawStyleHUD() {
+  if (V6.style < 5) return;
+  ctx.save();
+  ctx.globalAlpha = 0.85;
+  ctx.font = 'bold 14px Cinzel, serif';
+  ctx.fillStyle = V6.styleRank === 'SS' || V6.styleRank === 'S' ? '#ffe1a0' : '#72f7ff';
+  ctx.textAlign = 'right';
+  ctx.fillText(V6.styleRank + '  ' + Math.floor(V6.style), W - 24, 110);
+  ctx.restore();
+}
+
+// ---------- COMPANION SPIRIT ----------
+function spawnSpirit() {
+  if (!game.player) return;
+  if (V6.spiritCd > 0 && V6.spirit) return;
+  V6.spirit = {
+    x: game.player.x + game.player.w / 2,
+    y: game.player.y - 40,
+    vx: 0, vy: 0,
+    mode: 'follow',
+    life: 16
+  };
+  V6.spiritCd = 12;
+  toast('SPIRIT SUMMONED — PRESS F TO SEND');
+  // visible spawn burst
+  for (let i = 0; i < 15; i++) {
+    game.particles.push({
+      x: V6.spirit.x, y: V6.spirit.y,
+      vx: (Math.random() - 0.5) * 150,
+      vy: (Math.random() - 0.5) * 150,
+      life: 0.6, maxLife: 0.6,
+      size: 2 + Math.random() * 3,
+      color: '#a0f0ff'
+    });
+  }
+}
+function updateSpirit(dt) {
+  V6.spiritCd = Math.max(0, V6.spiritCd - dt);
+  if (!V6.spirit || !game.player) return;
+  const s = V6.spirit;
+  s.life -= dt;
+  if (s.life <= 0) {
+    V6.spirit = null;
+    toast('SPIRIT FADED');
+    return;
+  }
+
+  // pull fragments near spirit
+  if (game.level && game.level.fragments) {
+    for (const f of game.level.fragments) {
+      const fx = f.x * TILE, fy = f.y * TILE;
+      const d = Math.hypot(fx - s.x, fy - s.y);
+      if (d < 70 && d > 1) {
+        f.x += (s.x - fx) / d * 8 * dt;
+        f.y += (s.y - fy) / d * 8 * dt;
+        // if very close, snap to player
+        if (d < 30) {
+          f.x = (game.player.x + game.player.w / 2) / TILE;
+          f.y = (game.player.y + game.player.h / 2) / TILE;
+        }
+      }
+    }
+  }
+
+  if (s.mode === 'follow') {
+    const tx = game.player.x + game.player.w / 2 - 40 * (game.player.facing || 1);
+    const ty = game.player.y - 35;
+    s.x += (tx - s.x) * 6 * dt;
+    s.y += (ty - s.y) * 6 * dt;
+  } else {
+    // send mode - fly forward
+    s.x += (game.player.facing || 1) * 420 * dt;
+    s.y += Math.sin(game.time * 6) * 20 * dt;
+    // trigger traps near spirit
+    if (game.hiddenTraps) {
+      for (const h of game.hiddenTraps) {
+        if (h.triggered || h.disarmed) continue;
+        const hx = (h.x > 500) ? h.x : h.x * TILE;
+        if (Math.abs(hx - s.x) < 80) {
+          h.triggered = true;
+          if (typeof triggerNewTrap === 'function') {
+            try { triggerNewTrap(h); } catch (e) {}
+          }
+        }
+      }
+    }
+  }
+}
+function sendSpirit() {
+  if (!game.player) return;
+  if (!V6.spirit) {
+    if (V6.spiritCd > 0) {
+      toast('SPIRIT COOLING DOWN ' + Math.ceil(V6.spiritCd) + 's');
+      return;
+    }
+    spawnSpirit();
+    return;
+  }
+  if (V6.spirit.mode === 'follow') {
+    V6.spirit.mode = 'send';
+    V6.spirit.life = Math.max(V6.spirit.life, 6);
+    toast('SPIRIT SENT!');
+  } else {
+    V6.spirit.mode = 'follow';
+    toast('SPIRIT RECALLED');
+  }
+}
+function drawSpirit() {
+  if (!V6.spirit) return;
+  const s = V6.spirit;
+  const pulse = 0.75 + Math.sin(game.time * 8) * 0.25;
+
+  ctx.save();
+  // outer glow - very visible
+  ctx.globalAlpha = pulse;
+  ctx.fillStyle = 'rgba(100, 220, 255, 0.35)';
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, 40, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#72f7ff';
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ring
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, 16 + Math.sin(game.time * 5) * 3, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // label
+  ctx.fillStyle = '#a0f0ff';
+  ctx.font = 'bold 11px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(s.mode === 'send' ? '>>>' : 'SPIRIT', s.x, s.y - 28);
+  ctx.restore();
+}
+
+// ---------- BOSS RAGE PHASES ----------
+function updateBossRage() {
+  if (!game.boss || game.boss.dead) return;
+  const b = game.boss;
+  const ratio = b.hp / b.maxHp;
+  if (ratio <= 0.5 && V6.bossPhase === 1) {
+    V6.bossPhase = 2;
+    b.attackTimer = 0.6;
+    toast('THE GUARDIAN ENTERS RAGE');
+    flashScreen('#ff2a6a', 0.8);
+    // spawn extra lasers / hazards
+    for (let i = 0; i < 3; i++) {
+      game.hiddenTraps.push({
+        id: 8000 + i, type: 'laser',
+        x: (12 + i * 12) * TILE, y: 8 * TILE,
+        triggerRadius: 9 * TILE, triggered: false, state: 'idle', timer: 0
+      });
+    }
+    game.weather = 'storm';
+    updateWeatherUI();
+  }
+  if (ratio <= 0.25 && V6.bossPhase === 2) {
+    V6.bossPhase = 3;
+    b.attackTimer = 0.35;
+    toast('FINAL RAGE — THE ARENA SHATTERS');
+    flashScreen('#ff1040', 1.0);
+    V6.shake = 1.2;
+    // collapse some platforms visually by adding collapse timers
+    for (const p of game.level.platforms) {
+      if (p.type === 'p' && Math.random() < 0.45) {
+        const key = p.x + ',' + p.y;
+        game.collapseTimers.set(key, 0.8);
+      }
+    }
+  }
+}
+
+// ---------- WEATHER PHYSICS ----------
+function applyWeatherPhysics(p, dt) {
+  if (!p) return;
+  if (game.weather === 'rain' || game.weather === 'storm') {
+    // slippery
+    p.vx *= 0.985;
+    if (p.onGround && Math.abs(p.vx) > 50) p.vx += (p.vx > 0 ? 1 : -1) * 18 * dt;
+  }
+  if (game.weather === 'snow') {
+    p.vx *= 0.92; // slower movement
+  }
+  if (game.weather === 'storm' && Math.random() < 0.002) {
+    // random lightning near player
+    if (game.invulnTimer <= 0 && game.invincibilityTimer <= 0) {
+      const lx = p.x + (Math.random() - 0.5) * 200;
+      spawnBurst(lx, 0, 15, '#a0d0ff');
+      game.lightningFlash = 0.35;
+      if (Math.abs(lx - p.x) < 80) {
+        p.vy = -200;
+        toast('LIGHTNING STRIKES!');
+      }
+    }
+  }
+  if (game.weather === 'mist') {
+    // slightly hide distant traps by darkening (already visual)
+  }
+}
+
+// ---------- JUICE ----------
+function addShake(amount) { V6.shake = Math.max(V6.shake, amount); }
+function addHitstop(frames) { V6.hitstop = Math.max(V6.hitstop, frames); }
+
+function updateJuice(dt) {
+  V6.shake = Math.max(0, V6.shake - dt * 2.5);
+  if (V6.hitstop > 0) V6.hitstop -= dt * 60;
+
+  // near-death slow-mo
+  if (game.lives === 1 && game.running) {
+    V6.slowMo = 0.7;
+  } else {
+    V6.slowMo = 1;
+  }
+}
+
+// ---------- HOOKS ----------
+const _v6_up = updatePlayer;
+updatePlayer = function (dt) {
+  const realDt = dt * V6.slowMo;
+  if (V6.hitstop > 0) return; // freeze briefly
+  _v6_up(realDt);
+  recordGhostFrame(realDt);
+  updateCorruption(realDt);
+  updateCharacterSwitch(realDt);
+  updateStyle(realDt);
+  updateSpirit(realDt);
+  updateBossRage();
+  applyWeatherPhysics(game.player, realDt);
+  updateJuice(realDt);
+  updateRaceGhost(realDt);
+};
+
+const _v6_dp = drawPlayer;
+drawPlayer = function (c) {
+  // camera shake
+  if (V6.shake > 0) {
+    ctx.save();
+    ctx.translate((Math.random() - 0.5) * V6.shake * 14, (Math.random() - 0.5) * V6.shake * 10);
+  }
+  drawRaceGhost();
+  drawSpirit();
+  _v6_dp(c);
+  drawStyleHUD();
+  if (V6.shake > 0) ctx.restore();
+};
+
+const _v6_cl = completeLevel;
+completeLevel = function () {
+  saveGhostIfBetter(game.levelIndex, game.levelTime);
+  // style bonus medal flavor
+  if (V6.styleRank === 'SS' || V6.styleRank === 'S') {
+    setTimeout(() => toast('STYLE RANK ' + V6.styleRank + '!'), 600);
+  }
+  _v6_cl();
+  // story after certain levels
+  const next = game.levelIndex + 1;
+  if (STORY[game.levelIndex]) {
+    // delay story until after the normal complete screen is closed
+    // we already show story via showStory when appropriate
+  }
+};
+
+const _v6_ll = loadLevel;
+loadLevel = function (i) {
+  _v6_ll(i);
+  V6.corruption = 0;
+  V6.corruptionSpawned = 0;
+  V6._corrTimer = 0;
+  V6.bossPhase = 1;
+  V6.style = 0;
+  V6.styleRank = 'D';
+  V6.airTime = 0;
+  V6.spirit = null;
+  V6.spiritCd = 0;
+  V6.switchTimer = 0;
+  V6.switchCd = 0;
+  V6.originalChar = null;
+  V6.ghost = null;
+  V6.ghostIdx = 0;
+  V6.recording = [];
+  startGhostRecording();
+  loadGhost(i);
+  // show story when entering certain story levels (after previous boss)
+  if (STORY[i - 1]) {
+    // story is shown on complete of previous, so here we just continue
+  }
+};
+
+// also show story right after completing the trigger levels
+const _v6_cl2 = completeLevel;
+completeLevel = function () {
+  const idx = game.levelIndex;
+  _v6_cl2();
+  if (STORY[idx]) {
+    // override the normal continue with story first
+    setTimeout(() => {
+      if (!document.getElementById('msgScreen').classList.contains('hidden')) {
+        // inject story into the already open screen
+        const s = STORY[idx];
+        document.getElementById('msgTitle').textContent = s.title;
+        document.getElementById('msgSub').textContent = 'A MEMORY SURFACE';
+        document.getElementById('msgLeaderboard').innerHTML = `<p style="font-size:12px;line-height:1.75;color:#c0c9e4;text-align:center;padding:10px 14px">${s.text}</p>`;
+      }
+    }, 200);
+  }
+};
+
+// Input for character switch (R) and spirit (F)
+window.addEventListener('keydown', e => {
+  if (e.key.toLowerCase() === 'r' && !e.repeat) tryCharacterSwitch();
+  if (e.key.toLowerCase() === 'f' && !e.repeat) sendSpirit();
+});
+
+// Mobile buttons for switch + spirit
+(function () {
+  const sw = document.createElement('button');
+  sw.textContent = '⇄';
+  sw.title = 'Switch form (R)';
+  sw.style.cssText = 'border-color:rgba(200,160,255,.7);color:#c8a0ff';
+  sw.addEventListener('pointerdown', e => { e.preventDefault(); tryCharacterSwitch(); });
+  document.querySelector('#mobile .right-group').appendChild(sw);
+
+  const sp = document.createElement('button');
+  sp.textContent = '✧';
+  sp.title = 'Spirit (F)';
+  sp.style.cssText = 'border-color:rgba(160,240,255,.7);color:#a0f0ff';
+  sp.addEventListener('pointerdown', e => { e.preventDefault(); sendSpirit(); });
+  document.querySelector('#mobile .right-group').appendChild(sp);
+})();
+
+// Extra controls hint
+document.querySelector('.controls').insertAdjacentHTML('beforeend',
+  '<span><kbd>R</kbd> SWITCH</span><span><kbd>F</kbd> SPIRIT</span>');
+
+// Corruption + style HUD pill
+const v6hud = document.createElement('div');
+v6hud.className = 'pill';
+v6hud.style.cssText = 'position:fixed;top:140px;left:4%;z-index:10;pointer-events:none;max-width:70vw';
+document.body.appendChild(v6hud);
+setInterval(() => {
+  if (!game.running) { v6hud.style.display = 'none'; return; }
+  v6hud.style.display = 'flex';
+  let h = '';
+  if (V6.corruption > 0.05) {
+    const pct = Math.floor(V6.corruption * 100);
+    const col = pct > 70 ? '#ff5a5a' : pct > 40 ? '#ffb347' : '#c8a0ff';
+    h += `<span class="dot" style="background:${col}"></span> CORRUPT <b style="color:${col}">${pct}%</b>`;
+  }
+  if (V6.style > 8) h += ` · STYLE <b>${V6.styleRank}</b>`;
+  if (V6.switchCd > 0) h += ` · SHIFT <b>${Math.ceil(V6.switchCd)}s</b>`;
+  else if (V6.switchTimer > 0) h += ` · FORM <b>${Math.ceil(V6.switchTimer)}s</b>`;
+  if (V6.spirit) h += ` · SPIRIT`;
+  v6hud.innerHTML = h || '<span class="dot"></span> READY';
+}, 120);
+
+// Make powers and big events add style + shake
+const _origUsePower = usePower;
+usePower = function () {
+  _origUsePower();
+  addStyle(12, 'power');
+  addShake(0.35);
+};
+
+console.log('ÆTHERA v6 systems loaded — Ghost, Corruption, Switch, Rage, Style, Spirit, Story, Juice');
 
 
 // ============================================================

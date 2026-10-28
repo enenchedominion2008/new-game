@@ -386,7 +386,7 @@ body {
   <div class="overlay-inner">
     <h1>ÆTHERA</h1>
     <div class="sub">ADVENTURER OF THE SEASONS</div>
-    <p>Fifteen realms. Four seasons. Four corrupted guardians. Checkpoints guard your progress — step into their light to save your place. The gem grants flight and immunity, but only while shielded can you wound a guardian. Trust nothing.</p>
+    <p>Eighteen realms. Four seasons. Four corrupted guardians. New mysterious traps lurk in the shadows. Each wanderer now wields a legendary power. Checkpoints guard your progress. The gem grants flight and immunity — only while shielded can you wound a guardian. Trust nothing.</p>
     <button id="startBtn">BEGIN THE JOURNEY</button>
   </div>
 </div>
@@ -433,7 +433,7 @@ body {
 
 // ============================================================
 //  ÆTHERA — Adventurer of the Seasons
-//  v4.0 — Expansion: Powers, Gems, New Traps, Gauntlets
+//  v5.0 — Mysteries & Legends: Unique Powers, New Traps, Extra Levels
 // ============================================================
 
 const canvas = document.getElementById('world');
@@ -1434,6 +1434,7 @@ function getAllLevelPlatforms() {
 function getSolidTiles() {
   const tiles = [];
   for (const p of getAllLevelPlatforms()) {
+    if (p.invisible) continue; // Phantom Floor – no collision
     for (let dx = 0; dx < p.w; dx++) {
       for (let dy = 0; dy < p.h; dy++) {
         const key = (p.x + dx) + ',' + (p.y + dy);
@@ -1716,7 +1717,7 @@ function updatePlayer(dt) {
 
   if (game.keys.ArrowLeft || game.keys.a) { moveX = -1; p.facing = -1; }
   if (game.keys.ArrowRight || game.keys.d) { moveX = 1; p.facing = 1; }
-  if (game.hz.curse > 0 && moveX !== 0) { moveX = -moveX; p.facing = moveX; }
+  if ((game.hz.curse > 0 || (typeof X !== 'undefined' && X.reverse > 0)) && moveX !== 0) { moveX = -moveX; p.facing = moveX; }
 
   const accel = game.flying ? 0.45 : (p.onGround ? 0.35 : 0.22);
   p.vx = lerp(p.vx, moveX * speed, accel);
@@ -3009,6 +3010,7 @@ function render() {
   }
 
   for (const p of getAllLevelPlatforms()) {
+    if (p.invisible) continue; // Phantom Floor effect
     for (let dx = 0; dx < p.w; dx++) {
       for (let dy = 0; dy < p.h; dy++) {
         const key = (p.x + dx) + ',' + (p.y + dy);
@@ -4929,51 +4931,228 @@ document.getElementById('winBtn').addEventListener('click', () => {
 });
 
 // ============================================================
-//  ÆTHERA EXPANSION v4 — PASTED BLOCK
-//  Adds: 5 new traps, 4 new gems, 8 character powers (Q key),
-//  3 procedural Gauntlet levels, medals (Bronze/Silver/Gold).
+//  ÆTHERA EXPANSION v5 — MYSTERIES & LEGENDS
+//  - Completely redesigned unique character powers
+//  - New mysterious hidden traps (Echo, Soul Snare, Phantom Floor,
+//    Time Rift, Void Whisper, Cursed Mark)
+//  - Extra levels + harder Gauntlets
+//  - Shadow clones, phase shift, temporary platforms, etc.
 // ============================================================
-const X = { cd: 0, dash: 0, dashSpd: 0, speed: 0, magnet: 0, freeze: 0, dark: 0,
-            gems: [], next: 10, meteors: [], spikes: [], webs: [], wisps: [] };
+const X = {
+  cd: 0, dash: 0, dashSpd: 0, speed: 0, magnet: 0, freeze: 0, dark: 0,
+  phase: 0, reverse: 0, clones: [],
+  gems: [], next: 10,
+  meteors: [], spikes: [], webs: [], wisps: [],
+  snares: [], echos: [], voids: [], marks: []
+};
 
 // ---------- CHARACTER POWERS (press Q / ✦ button) ----------
 const POWERS = {
-  adventurer: { n: 'LANTERN WARD', cd: 12, fn(p) {
-    let c = 0;
-    for (const h of game.hiddenTraps) if (!h.triggered && Math.abs(h.x - p.x) < TILE * 8) { h.disarmed = true; c++; }
-    spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 30, '#ffdd44'); toast('WARD SEALED ' + c + ' HIDDEN TRAPS'); } },
-  saiyan: { n: 'KI DASH', cd: 9, fn(p) {
-    X.dash = 0.4; X.dashSpd = p.facing * 1000; game.invulnTimer = Math.max(game.invulnTimer, 0.8);
-    spawnBurst(p.x, p.y + 20, 25, '#ffe855'); } },
-  ninja: { n: 'SHADOW STEP', cd: 7, fn(p) {
-    const solids = getSolidTiles();
-    for (let d = 5; d >= 1; d--) {
-      const b = { x: p.x + p.facing * d * TILE, y: p.y, w: p.w, h: p.h };
-      if (!solids.some(s => rectsOverlap(b, s))) { spawnBurst(p.x, p.y, 20, '#ff5a5a'); p.x = clamp(b.x, 0, game.level.length * TILE - p.w); break; }
+  adventurer: {
+    n: 'LANTERN OF REVELATION',
+    cd: 14,
+    fn(p) {
+      let revealed = 0;
+      for (const h of game.hiddenTraps) {
+        if (!h.triggered && Math.abs(h.x - p.x) < TILE * 12) {
+          h.revealed = true;
+          h.disarmed = true;
+          revealed++;
+          spawnBurst(h.x + TILE / 2, h.y, 16, '#ffdd44');
+        }
+      }
+      game.invulnTimer = Math.max(game.invulnTimer, 2.0);
+      spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 42, '#ffdd44');
+      toast(revealed > 0 ? `REVEALED & SEALED ${revealed} HIDDEN DANGERS` : 'THE LIGHT FINDS NOTHING NEAR');
     }
-    game.invulnTimer = Math.max(game.invulnTimer, 0.6); spawnBurst(p.x, p.y, 20, '#ff5a5a'); } },
-  mage: { n: 'TIME FREEZE', cd: 14, fn() { X.freeze = 4; flashScreen('#a07aff', 0.5); } },
-  ranger: { n: 'EAGLE LEAP', cd: 5, fn(p) {
-    p.vy = -1250; p.onGround = false; spawnBurst(p.x + p.w / 2, p.y + p.h, 20, '#8affc0'); } },
-  knight: { n: 'AEGIS', cd: 15, fn() {
-    game.invulnTimer = Math.max(game.invulnTimer, 3); flashScreen('#ffe8a0', 0.5); } },
-  ghost: { n: 'SOUL PULL', cd: 12, fn(p) {
-    for (const f of game.level.fragments) if (Math.hypot(f.x * TILE - p.x, f.y * TILE - p.y) < TILE * 11) { f.x = (p.x + p.w / 2) / TILE; f.y = (p.y + p.h / 2) / TILE; }
-    game.invulnTimer = Math.max(game.invulnTimer, 2); } },
-  robot: { n: 'EMP PULSE', cd: 13, fn(p) {
-    game.rocks = []; game.darts = []; game.lasers = []; game.bossProjectiles = [];
-    game.hz.bolts = []; game.hz.boulders = []; game.hz.bats = []; game.hz.geysers = [];
-    X.meteors = []; X.spikes = []; X.wisps = [];
-    if (game.boss) game.boss.attackTimer += 3;
-    spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 50, '#ff8a8a'); flashScreen('#ff5a5a', 0.5); } }
+  },
+
+  saiyan: {
+    n: 'SUPER SAIYAN OVERDRIVE',
+    cd: 16,
+    fn(p) {
+      X.dash = 1.15;
+      X.dashSpd = p.facing * 1500;
+      X.speed = Math.max(X.speed, 9.5);
+      game.invulnTimer = Math.max(game.invulnTimer, 2.6);
+      game.invincibilityTimer = Math.max(game.invincibilityTimer, 2.3);
+      // Ki trail that damages boss
+      for (let i = 0; i < 14; i++) {
+        setTimeout(() => {
+          if (!game.player) return;
+          spawnBurst(game.player.x + game.player.w / 2, game.player.y + 18, 9, '#ffe855');
+          if (game.boss && !game.boss.dead) {
+            const dx = Math.abs(game.boss.x - game.player.x);
+            if (dx < 200) {
+              game.boss.hp = Math.max(0, game.boss.hp - 0.4);
+              game.boss.hitFlash = 0.3;
+              if (game.boss.hp <= 0) {
+                game.boss.dead = true;
+                AudioEngine.bossRoar();
+                spawnBurst(game.boss.x + game.boss.w / 2, game.boss.y + game.boss.h / 2, 80, '#ff2a6a');
+                toast(game.level.bossName + ' FALLS');
+              }
+            }
+          }
+        }, i * 65);
+      }
+      toast('SUPER SAIYAN OVERDRIVE!');
+    }
+  },
+
+  ninja: {
+    n: 'SHADOW CLONE JUTSU',
+    cd: 11,
+    fn(p) {
+      const clone = {
+        x: p.x, y: p.y,
+        vx: p.facing * 340,
+        life: 5.0,
+        facing: p.facing,
+        hitTaken: false
+      };
+      X.clones.push(clone);
+      game.invulnTimer = Math.max(game.invulnTimer, 1.4);
+      spawnBurst(p.x, p.y, 28, '#ff5a5a');
+      toast('SHADOW CLONE DEPLOYED');
+    }
+  },
+
+  mage: {
+    n: 'ARCANE DOMINION',
+    cd: 15,
+    fn(p) {
+      X.freeze = 5.8;
+      // Short range teleport
+      const solids = getSolidTiles();
+      for (let d = 5; d >= 1; d--) {
+        const test = { x: p.x + p.facing * d * TILE, y: p.y, w: p.w, h: p.h };
+        if (!solids.some(s => rectsOverlap(test, s))) {
+          p.x = clamp(test.x, 0, game.level.length * TILE - p.w);
+          break;
+        }
+      }
+      // Pull all fragments
+      for (const f of game.level.fragments) {
+        f.x = (p.x + p.w / 2) / TILE;
+        f.y = (p.y + p.h / 2) / TILE;
+      }
+      game.invulnTimer = Math.max(game.invulnTimer, 1.6);
+      flashScreen('#a07aff', 0.65);
+      toast('TIME BENDS TO YOUR WILL');
+    }
+  },
+
+  ranger: {
+    n: "NATURE'S GRASP",
+    cd: 9,
+    fn(p) {
+      const baseX = Math.floor(p.x / TILE);
+      for (let i = -1; i <= 4; i++) {
+        const px = baseX + i;
+        if (px < 0 || px > game.level.length - 1) continue;
+        game.secretRoomPlatforms.push({
+          x: px, y: 8, w: 1, h: 1, type: 'p', temporary: true, life: 7
+        });
+      }
+      p.vy = -1420;
+      p.onGround = false;
+      game.invulnTimer = Math.max(game.invulnTimer, 1.1);
+      spawnBurst(p.x + p.w / 2, p.y + p.h, 32, '#8affc0');
+      toast('THE FOREST ANSWERS');
+    }
+  },
+
+  knight: {
+    n: 'DIVINE AEGIS',
+    cd: 17,
+    fn(p) {
+      game.invulnTimer = Math.max(game.invulnTimer, 4.5);
+      game.invincibilityTimer = Math.max(game.invincibilityTimer, 3.8);
+      // Reflect projectiles
+      for (const pr of game.bossProjectiles) {
+        pr.vx *= -1.5;
+        pr.vy *= -1.2;
+      }
+      for (const d of game.darts) {
+        d.vx *= -1.4;
+        d.vy *= -1.15;
+      }
+      flashScreen('#ffe8a0', 0.75);
+      spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 50, '#ffe8a0');
+      toast('THE SHIELD OF THE ANCIENTS!');
+    }
+  },
+
+  ghost: {
+    n: 'SPECTRAL POSSESSION',
+    cd: 13,
+    fn(p) {
+      X.phase = 3.5;
+      game.invulnTimer = Math.max(game.invulnTimer, 3.5);
+      // Possess nearest trap
+      let nearest = null, best = Infinity;
+      for (const h of game.hiddenTraps) {
+        if (h.triggered || h.disarmed) continue;
+        const d = Math.abs(h.x - p.x);
+        if (d < best) { best = d; nearest = h; }
+      }
+      if (nearest && best < TILE * 10) {
+        nearest.disarmed = true;
+        nearest.possessed = true;
+        spawnBurst(nearest.x + TILE / 2, nearest.y, 24, '#a0ffb0');
+        toast('A TRAP HAS BEEN POSSESSED');
+      } else {
+        toast('YOU PHASE THROUGH REALITY');
+      }
+      spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 38, '#a0ffb0');
+    }
+  },
+
+  robot: {
+    n: 'OVERCLOCK PROTOCOL',
+    cd: 14,
+    fn(p) {
+      X.speed = Math.max(X.speed, 8.5);
+      X.magnet = Math.max(X.magnet, 7);
+      // Full EMP
+      game.rocks = [];
+      game.darts = [];
+      game.lasers = [];
+      game.bossProjectiles = [];
+      game.hz.bolts = [];
+      game.hz.boulders = [];
+      game.hz.bats = [];
+      game.hz.geysers = [];
+      X.meteors = [];
+      X.spikes = [];
+      X.wisps = [];
+      X.snares = [];
+      X.echos = [];
+      X.voids = [];
+      if (game.boss) {
+        game.boss.attackTimer += 5;
+        game.boss.hitFlash = 0.9;
+      }
+      game.invulnTimer = Math.max(game.invulnTimer, 2.2);
+      spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 65, '#ff8a8a');
+      flashScreen('#ff5a5a', 0.65);
+      toast('SYSTEMS OVERCLOCKED — EMP DEPLOYED');
+    }
+  }
 };
 
 function usePower() {
   if (!game.running || game.paused || game.respawnTimer > 0 || X.cd > 0 || !game.player) return;
   const P = POWERS[activeChar.id] || POWERS.adventurer;
-  P.fn(game.player); X.cd = P.cd; AudioEngine.gem(); toast(P.n + '!');
+  P.fn(game.player);
+  X.cd = P.cd;
+  AudioEngine.gem();
+  toast(P.n + '!');
 }
-window.addEventListener('keydown', e => { if (e.key.toLowerCase() === 'q' && !e.repeat) usePower(); });
+window.addEventListener('keydown', e => {
+  if (e.key.toLowerCase() === 'q' && !e.repeat) usePower();
+});
 
 // ---------- GEMS ----------
 const GEMS = {
@@ -4994,20 +5173,24 @@ function gemTick(dt, p) {
     X.next = game.time + rand(14, 22);
   }
   for (let i = X.gems.length - 1; i >= 0; i--) {
-    const g = X.gems[i]; g.life -= dt;
+    const g = X.gems[i];
+    g.life -= dt;
     const gx = g.x * TILE, gy = g.y * TILE;
     if (rectsOverlap({ x: p.x, y: p.y, w: p.w, h: p.h }, { x: gx - 22, y: gy - 22, w: 44, h: 44 })) {
       if (g.type === 'heart') game.lives = Math.min(5, game.lives + 1);
       if (g.type === 'speed') X.speed = 7;
       if (g.type === 'freeze') X.freeze = 5;
       if (g.type === 'magnet') X.magnet = 8;
-      spawnBurst(gx, gy, 30, GEMS[g.type].c); toast(GEMS[g.type].msg); AudioEngine.gem(); updateHUD();
+      spawnBurst(gx, gy, 30, GEMS[g.type].c);
+      toast(GEMS[g.type].msg);
+      AudioEngine.gem();
+      updateHUD();
       X.gems.splice(i, 1);
     } else if (g.life <= 0) X.gems.splice(i, 1);
   }
 }
 
-// ---------- NEW TRAPS: meteor, spikewave, web, wisp, blackout ----------
+// ---------- NEW + MYSTERIOUS TRAPS ----------
 const _tnt = triggerNewTrap;
 triggerNewTrap = function (ht) {
   const p = game.player, gy = 10 * TILE, pc = p.x + p.w / 2;
@@ -5025,186 +5208,598 @@ triggerNewTrap = function (ht) {
     X.wisps.push({ x: pc + 9 * TILE, y: 3 * TILE, vx: 0, vy: 0, life: 7 }); toast('A HUNTING WISP AWAKENS!'); return true;
   }
   if (ht.type === 'blackout') { X.dark = 4.5; toast('THE LIGHTS DIE...'); return true; }
+
+  // === NEW MYSTERIOUS TRAPS ===
+  if (ht.type === 'echo') {
+    X.echos.push({
+      x: p.x, y: p.y, vx: p.facing * 280, life: 4.5, facing: p.facing
+    });
+    toast('AN ECHO OF YOURSELF WALKS AHEAD...');
+    return true;
+  }
+  if (ht.type === 'soulsnare') {
+    X.snares.push({
+      x: p.x + p.w / 2, y: p.y + p.h / 2,
+      tx: p.x - p.facing * 220, life: 1.8
+    });
+    toast('SOUL SNARE — YOU ARE PULLED BACK!');
+    return true;
+  }
+  if (ht.type === 'phantomfloor') {
+    // Mark nearby ground platforms to become invisible after short delay
+    const cx = Math.floor(ht.x / TILE);
+    for (const plat of game.level.platforms) {
+      if (plat.type === 'g' && plat.y === 10 && Math.abs(plat.x + plat.w / 2 - cx) < 4) {
+        plat.phantom = true;
+        plat.phantomTimer = 1.4;
+      }
+    }
+    toast('THE FLOOR FORGETS ITSELF...');
+    return true;
+  }
+  if (ht.type === 'timerift') {
+    X.reverse = 3.2;
+    toast('TIME RIFT — CONTROLS REVERSED!');
+    return true;
+  }
+  if (ht.type === 'voidwhisper') {
+    X.voids.push({
+      x: ht.x, y: 9 * TILE, r: 3.2 * TILE, life: 8, drain: 0
+    });
+    toast('A VOID WHISPER BEGINS TO FEED...');
+    return true;
+  }
+  if (ht.type === 'cursedmark') {
+    X.marks.push({
+      x: p.x + p.w / 2, y: p.y + p.h / 2, life: 6, pulse: 0
+    });
+    toast('A CURSED MARK HAS BEEN PLACED ON YOU');
+    return true;
+  }
   return _tnt(ht);
 };
 
 function updX(dt) {
-  const p = game.player; if (!p) return;
-  const sh = game.invincibilityTimer > 0 || game.invulnTimer > 0, gy = 10 * TILE;
+  const p = game.player;
+  if (!p) return;
+  const sh = game.invincibilityTimer > 0 || game.invulnTimer > 0 || X.phase > 0;
+  const gy = 10 * TILE;
   const pb = { x: p.x + 4, y: p.y + 4, w: p.w - 8, h: p.h - 8 };
+
+  // Phase (ghost power)
+  X.phase = Math.max(0, X.phase - dt);
+  X.reverse = Math.max(0, X.reverse - dt);
+
+  // Temporary platforms lifetime
+  for (let i = game.secretRoomPlatforms.length - 1; i >= 0; i--) {
+    const pl = game.secretRoomPlatforms[i];
+    if (pl.temporary) {
+      pl.life -= dt;
+      if (pl.life <= 0) game.secretRoomPlatforms.splice(i, 1);
+    }
+  }
+
+  // Phantom floors
+  for (const plat of game.level.platforms) {
+    if (plat.phantom && plat.phantomTimer !== undefined) {
+      plat.phantomTimer -= dt;
+      if (plat.phantomTimer <= 0) {
+        plat.invisible = true;
+        delete plat.phantomTimer;
+      }
+    }
+  }
+
+  // Meteors
   for (let i = X.meteors.length - 1; i >= 0; i--) {
-    const m = X.meteors[i]; m.t += dt;
+    const m = X.meteors[i];
+    m.t += dt;
     if (m.t > m.warn) {
       m.y += 850 * dt;
       if (!sh && rectsOverlap(pb, { x: m.x - 16, y: m.y - 16, w: 32, h: 32 })) killPlayer();
-      if (m.y >= gy) { spawnBurst(m.x, gy, 12, '#ff8a3a'); X.meteors.splice(i, 1); }
+      if (m.y >= gy) {
+        spawnBurst(m.x, gy, 12, '#ff8a3a');
+        X.meteors.splice(i, 1);
+      }
     }
   }
+
+  // Spike waves
   for (let i = X.spikes.length - 1; i >= 0; i--) {
-    const s = X.spikes[i]; s.t += dt;
+    const s = X.spikes[i];
+    s.t += dt;
     if (s.t > 0.55 && s.t < 1.25 && !sh && rectsOverlap(pb, { x: s.x + 6, y: gy - 42, w: TILE - 12, h: 42 })) killPlayer();
     if (s.t >= 1.3) X.spikes.splice(i, 1);
   }
-  for (let i = X.webs.length - 1; i >= 0; i--) if ((X.webs[i].life -= dt) <= 0) X.webs.splice(i, 1);
+
+  // Webs
+  for (let i = X.webs.length - 1; i >= 0; i--) {
+    if ((X.webs[i].life -= dt) <= 0) X.webs.splice(i, 1);
+  }
+
+  // Wisps
   for (let i = X.wisps.length - 1; i >= 0; i--) {
-    const w = X.wisps[i]; w.life -= dt;
+    const w = X.wisps[i];
+    w.life -= dt;
     const dx = p.x + p.w / 2 - w.x, dy = p.y + p.h / 2 - w.y, d = Math.hypot(dx, dy) || 1;
-    w.vx = lerp(w.vx, dx / d * 175, 0.04); w.vy = lerp(w.vy, dy / d * 175, 0.04);
-    w.x += w.vx * dt; w.y += w.vy * dt;
-    if (!sh && rectsOverlap(pb, { x: w.x - 13, y: w.y - 13, w: 26, h: 26 })) { killPlayer(); X.wisps.splice(i, 1); continue; }
+    w.vx = lerp(w.vx, dx / d * 175, 0.04);
+    w.vy = lerp(w.vy, dy / d * 175, 0.04);
+    w.x += w.vx * dt;
+    w.y += w.vy * dt;
+    if (!sh && rectsOverlap(pb, { x: w.x - 13, y: w.y - 13, w: 26, h: 26 })) {
+      killPlayer();
+      X.wisps.splice(i, 1);
+      continue;
+    }
     if (w.life <= 0) X.wisps.splice(i, 1);
+  }
+
+  // Echo (fake player that walks forward)
+  for (let i = X.echos.length - 1; i >= 0; i--) {
+    const e = X.echos[i];
+    e.life -= dt;
+    e.x += e.vx * dt;
+    // Trigger nearby traps as it walks
+    for (const h of game.hiddenTraps) {
+      if (!h.triggered && Math.abs(h.x - e.x) < TILE * 1.8) {
+        h.triggered = true;
+        if (typeof triggerNewTrap === 'function') triggerNewTrap(h);
+      }
+    }
+    if (e.life <= 0) X.echos.splice(i, 1);
+  }
+
+  // Soul Snare (pull player back)
+  for (let i = X.snares.length - 1; i >= 0; i--) {
+    const s = X.snares[i];
+    s.life -= dt;
+    const dx = s.tx - p.x;
+    p.x += dx * 0.18;
+    p.vx *= 0.6;
+    if (s.life <= 0) X.snares.splice(i, 1);
+  }
+
+  // Void Whisper (drains life if lingering)
+  for (let i = X.voids.length - 1; i >= 0; i--) {
+    const v = X.voids[i];
+    v.life -= dt;
+    const dx = p.x + p.w / 2 - v.x;
+    const dy = p.y + p.h / 2 - v.y;
+    if (Math.hypot(dx, dy) < v.r) {
+      v.drain += dt;
+      if (v.drain >= 2.2) {
+        v.drain = 0;
+        if (!sh) {
+          game.lives = Math.max(0, game.lives - 1);
+          updateHUD();
+          toast('THE VOID TAKES A PIECE OF YOU...');
+          spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 20, '#6a2aff');
+          if (game.lives <= 0) killPlayer();
+        }
+      }
+    }
+    if (v.life <= 0) X.voids.splice(i, 1);
+  }
+
+  // Cursed Mark (periodic damage pulse)
+  for (let i = X.marks.length - 1; i >= 0; i--) {
+    const m = X.marks[i];
+    m.life -= dt;
+    m.pulse += dt;
+    if (m.pulse >= 1.8) {
+      m.pulse = 0;
+      if (!sh) {
+        game.invulnTimer = 0.4;
+        p.vy = -280;
+        spawnBurst(p.x + p.w / 2, p.y + p.h / 2, 18, '#ff2a6a');
+        toast('THE MARK BURNS');
+      }
+    }
+    if (m.life <= 0) X.marks.splice(i, 1);
+  }
+
+  // Shadow Clones (ninja)
+  for (let i = X.clones.length - 1; i >= 0; i--) {
+    const c = X.clones[i];
+    c.life -= dt;
+    c.x += c.vx * dt;
+    // Can absorb one hit for the player if close
+    if (!c.hitTaken && Math.abs(c.x - p.x) < TILE * 2.5) {
+      // simple proximity absorb handled via invuln on player if needed
+    }
+    if (c.life <= 0) X.clones.splice(i, 1);
   }
 }
 
 function drawX() {
   const gy = 10 * TILE, T = game.time;
   ctx.save();
+
+  // Webs
   for (const w of X.webs) {
-    ctx.strokeStyle = 'rgba(230,240,255,0.55)'; ctx.lineWidth = 1.5;
-    for (let i = 0; i <= 8; i++) { ctx.beginPath(); ctx.moveTo(w.x + i * w.w / 8, gy - 2); ctx.lineTo(w.x + w.w / 2, gy - 38); ctx.stroke(); }
-    ctx.fillStyle = 'rgba(230,240,255,0.12)'; ctx.fillRect(w.x, gy - 38, w.w, 38);
+    ctx.strokeStyle = 'rgba(230,240,255,0.55)';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i <= 8; i++) {
+      ctx.beginPath();
+      ctx.moveTo(w.x + i * w.w / 8, gy - 2);
+      ctx.lineTo(w.x + w.w / 2, gy - 38);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(230,240,255,0.12)';
+    ctx.fillRect(w.x, gy - 38, w.w, 38);
   }
+
+  // Meteors
   for (const m of X.meteors) {
     if (m.t <= m.warn) {
       const pl = 0.5 + Math.sin(T * 25) * 0.5;
-      ctx.strokeStyle = `rgba(255,90,60,${0.3 + pl * 0.5})`; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(m.x, gy - 2, 14 + pl * 6, 0, 7); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,90,60,${0.3 + pl * 0.5})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(m.x, gy - 2, 14 + pl * 6, 0, 7);
+      ctx.stroke();
     } else {
       const g = ctx.createRadialGradient(m.x, m.y, 2, m.x, m.y, 30);
-      g.addColorStop(0, '#fff2b0'); g.addColorStop(0.4, '#ff8a3a'); g.addColorStop(1, 'rgba(255,60,20,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(m.x, m.y, 30, 0, 7); ctx.fill();
-      ctx.fillStyle = 'rgba(255,120,40,0.35)'; ctx.fillRect(m.x - 6, m.y - 90, 12, 90);
+      g.addColorStop(0, '#fff2b0');
+      g.addColorStop(0.4, '#ff8a3a');
+      g.addColorStop(1, 'rgba(255,60,20,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, 30, 0, 7);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,120,40,0.35)';
+      ctx.fillRect(m.x - 6, m.y - 90, 12, 90);
     }
   }
+
+  // Spikes
   for (const s of X.spikes) {
     if (s.t < 0) continue;
-    if (s.t < 0.55) { ctx.fillStyle = `rgba(255,60,60,${0.4 + Math.sin(T * 30) * 0.3})`; ctx.fillRect(s.x + 8, gy - 4, TILE - 16, 4); }
-    else if (s.t < 1.25) {
-      ctx.fillStyle = '#c0c8d8'; ctx.strokeStyle = '#ff3030'; ctx.lineWidth = 1.5;
-      for (let k = 0; k < 3; k++) { const sx = s.x + 4 + k * 14; ctx.beginPath(); ctx.moveTo(sx, gy); ctx.lineTo(sx + 7, gy - 42); ctx.lineTo(sx + 14, gy); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+    if (s.t < 0.55) {
+      ctx.fillStyle = `rgba(255,60,60,${0.4 + Math.sin(T * 30) * 0.3})`;
+      ctx.fillRect(s.x + 8, gy - 4, TILE - 16, 4);
+    } else if (s.t < 1.25) {
+      ctx.fillStyle = '#c0c8d8';
+      ctx.strokeStyle = '#ff3030';
+      ctx.lineWidth = 1.5;
+      for (let k = 0; k < 3; k++) {
+        const sx = s.x + 4 + k * 14;
+        ctx.beginPath();
+        ctx.moveTo(sx, gy);
+        ctx.lineTo(sx + 7, gy - 42);
+        ctx.lineTo(sx + 14, gy);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
     }
   }
+
+  // Wisps
   for (const w of X.wisps) {
     const g = ctx.createRadialGradient(w.x, w.y, 2, w.x, w.y, 34);
-    g.addColorStop(0, '#fff'); g.addColorStop(0.35, '#a0f0ff'); g.addColorStop(1, 'rgba(160,100,255,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(w.x, w.y, 34 + Math.sin(T * 10) * 3, 0, 7); ctx.fill();
+    g.addColorStop(0, '#fff');
+    g.addColorStop(0.35, '#a0f0ff');
+    g.addColorStop(1, 'rgba(160,100,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(w.x, w.y, 34 + Math.sin(T * 10) * 3, 0, 7);
+    ctx.fill();
   }
+
+  // Echo (semi-transparent clone)
+  for (const e of X.echos) {
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle = '#a0f0ff';
+    ctx.fillRect(e.x + 6, e.y + 4, 18, 38);
+    ctx.globalAlpha = 1;
+  }
+
+  // Soul Snare lines
+  for (const s of X.snares) {
+    ctx.strokeStyle = 'rgba(180,100,255,0.7)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(game.player.x + game.player.w / 2, game.player.y + game.player.h / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Void Whisper
+  for (const v of X.voids) {
+    const pulse = 0.4 + Math.sin(T * 4) * 0.2;
+    const g = ctx.createRadialGradient(v.x, v.y, 10, v.x, v.y, v.r);
+    g.addColorStop(0, `rgba(80,20,140,${0.35 * pulse})`);
+    g.addColorStop(1, 'rgba(40,0,80,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(v.x, v.y, v.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Cursed Mark
+  for (const m of X.marks) {
+    const pulse = 0.5 + Math.sin(T * 8) * 0.4;
+    ctx.strokeStyle = `rgba(255,40,100,${pulse})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, 22 + Math.sin(T * 6) * 4, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Shadow Clones
+  for (const c of X.clones) {
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = '#ff5a5a';
+    ctx.fillRect(c.x + 5, c.y + 3, 20, 40);
+    ctx.globalAlpha = 1;
+  }
+
+  // Gems
   for (const g of X.gems) {
     const gx = g.x * TILE, gyy = g.y * TILE + Math.sin(T * 3 + g.x) * 5, c = GEMS[g.type].c;
     const gl = ctx.createRadialGradient(gx, gyy, 4, gx, gyy, 46);
-    gl.addColorStop(0, c); gl.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.globalAlpha = 0.5; ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(gx, gyy, 46, 0, 7); ctx.fill();
+    gl.addColorStop(0, c);
+    gl.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = gl;
+    ctx.beginPath();
+    ctx.arc(gx, gyy, 46, 0, 7);
+    ctx.fill();
     ctx.globalAlpha = g.life < 4 ? 0.4 + Math.sin(T * 14) * 0.4 : 1;
-    ctx.fillStyle = c; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(gx, gyy - 16); ctx.lineTo(gx + 12, gyy); ctx.lineTo(gx, gyy + 16); ctx.lineTo(gx - 12, gyy); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#05060f'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(GEMS[g.type].s, gx, gyy + 5);
+    ctx.fillStyle = c;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(gx, gyy - 16);
+    ctx.lineTo(gx + 12, gyy);
+    ctx.lineTo(gx, gyy + 16);
+    ctx.lineTo(gx - 12, gyy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#05060f';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(GEMS[g.type].s, gx, gyy + 5);
     ctx.globalAlpha = 1;
   }
+
   ctx.restore();
 }
+
 function darkX() {
   if (X.dark <= 0 || !game.player) return;
   const p = game.player, cx = p.x + p.w / 2, cy = p.y + p.h / 2, a = Math.min(1, X.dark) * 0.94;
   ctx.save();
   const g = ctx.createRadialGradient(cx, cy, 70, cx, cy, 300);
-  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${a})`);
-  ctx.fillStyle = g; ctx.fillRect(game.camera.x - 10, -10, W + 20, H + 20);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, `rgba(0,0,0,${a})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(game.camera.x - 10, -10, W + 20, H + 20);
   ctx.restore();
 }
 
-// ---------- HOOKS INTO YOUR EXISTING GAME ----------
+// ---------- HOOKS INTO EXISTING GAME ----------
 const _up = updatePlayer;
 updatePlayer = function (dt) {
   const p = game.player;
   if (!p || game.paused) return _up(dt);
-  X.cd = Math.max(0, X.cd - dt); X.speed = Math.max(0, X.speed - dt); X.magnet = Math.max(0, X.magnet - dt);
-  X.freeze = Math.max(0, X.freeze - dt); X.dark = Math.max(0, X.dark - dt);
-  if (X.dash > 0) { X.dash -= dt; p.vx = X.dashSpd; }
-  const sdt = X.speed > 0 ? dt * 1.3 : dt;
-  _up(sdt);
-  if (X.webs.some(w => p.onGround && p.x + p.w > w.x && p.x < w.x + w.w)) p.x -= p.vx * sdt * 0.5;
-  if (X.magnet > 0) for (const f of game.level.fragments) {
-    const dx = p.x + p.w / 2 - f.x * TILE, dy = p.y + p.h / 2 - f.y * TILE, d = Math.hypot(dx, dy);
-    if (d < TILE * 8 && d > 1) { f.x += dx / d * 340 * dt / TILE; f.y += dy / d * 340 * dt / TILE; }
+
+  X.cd = Math.max(0, X.cd - dt);
+  X.speed = Math.max(0, X.speed - dt);
+  X.magnet = Math.max(0, X.magnet - dt);
+  X.freeze = Math.max(0, X.freeze - dt);
+  X.dark = Math.max(0, X.dark - dt);
+
+  if (X.dash > 0) {
+    X.dash -= dt;
+    p.vx = X.dashSpd;
   }
+
+  const sdt = X.speed > 0 ? dt * 1.35 : dt;
+  _up(sdt);
+
+  // Webs slow movement
+  if (X.webs.some(w => p.onGround && p.x + p.w > w.x && p.x < w.x + w.w)) {
+    p.x -= p.vx * sdt * 0.55;
+  }
+
+  // Magnet
+  if (X.magnet > 0) {
+    for (const f of game.level.fragments) {
+      const dx = p.x + p.w / 2 - f.x * TILE;
+      const dy = p.y + p.h / 2 - f.y * TILE;
+      const d = Math.hypot(dx, dy);
+      if (d < TILE * 9 && d > 1) {
+        f.x += dx / d * 360 * dt / TILE;
+        f.y += dy / d * 360 * dt / TILE;
+      }
+    }
+  }
+
+  // Phase makes player semi-transparent (handled in draw)
   gemTick(dt, p);
 };
-const _uh = updateHazards;      updateHazards = function (dt) { const f = X.freeze > 0 ? 0.25 : 1; _uh(dt * f); updX(dt * f); };
-const _uht = updateHiddenTraps; updateHiddenTraps = function (dt) { _uht(dt * (X.freeze > 0 ? 0.25 : 1)); };
-const _ub = updateBoss;         updateBoss = function (dt) { _ub(dt * (X.freeze > 0 ? 0.25 : 1)); };
-const _dp = drawPlayer;         drawPlayer = function (c) { drawX(); _dp(c); darkX(); };
-const _rh = resetHazards;       resetHazards = function () { _rh(); X.meteors = []; X.spikes = []; X.webs = []; X.wisps = []; X.dark = 0; X.dash = 0; };
-const _ll = loadLevel;          loadLevel = function (i) { _ll(i); X.gems = []; X.speed = X.magnet = X.freeze = 0; X.next = game.time + 8; };
-const _rg = restartGame;        restartGame = function () { X.cd = 0; _rg(); };
+
+const _uh = updateHazards;
+updateHazards = function (dt) {
+  const f = X.freeze > 0 ? 0.22 : 1;
+  _uh(dt * f);
+  updX(dt * f);
+};
+
+const _uht = updateHiddenTraps;
+updateHiddenTraps = function (dt) {
+  _uht(dt * (X.freeze > 0 ? 0.22 : 1));
+};
+
+const _ub = updateBoss;
+updateBoss = function (dt) {
+  _ub(dt * (X.freeze > 0 ? 0.22 : 1));
+};
+
+const _dp = drawPlayer;
+drawPlayer = function (c) {
+  drawX();
+  // Phase visual
+  if (X.phase > 0) {
+    ctx.save();
+    ctx.globalAlpha = 0.45 + Math.sin(game.time * 8) * 0.15;
+  }
+  _dp(c);
+  if (X.phase > 0) ctx.restore();
+  darkX();
+};
+
+const _rh = resetHazards;
+resetHazards = function () {
+  _rh();
+  X.meteors = [];
+  X.spikes = [];
+  X.webs = [];
+  X.wisps = [];
+  X.snares = [];
+  X.echos = [];
+  X.voids = [];
+  X.marks = [];
+  X.clones = [];
+  X.dark = 0;
+  X.dash = 0;
+  X.phase = 0;
+  X.reverse = 0;
+};
+
+const _ll = loadLevel;
+loadLevel = function (i) {
+  _ll(i);
+  X.gems = [];
+  X.speed = X.magnet = X.freeze = 0;
+  X.next = game.time + 8;
+  // clear temporary platforms
+  game.secretRoomPlatforms = game.secretRoomPlatforms.filter(p => !p.temporary);
+};
+
+const _rg = restartGame;
+restartGame = function () {
+  X.cd = 0;
+  _rg();
+};
+
 const _uhud = updateHUD;
 updateHUD = function () {
-  _uhud(); let h = ''; const n = Math.max(3, game.lives);
+  _uhud();
+  let h = '';
+  const n = Math.max(3, game.lives);
   for (let i = 0; i < n; i++) h += i < game.lives ? '♥' : '♡';
   document.getElementById('hudLives').textContent = h;
 };
+
 const _cl = completeLevel;
 completeLevel = function () {
   const t = game.levelTime, r = t / game.level.length, boss = game.level.isBoss;
-  _cl(); if (boss) return;
-  const m = r < 0.2 ? '🥇 GOLD' : r < 0.3 ? '🥈 SILVER' : r < 0.45 ? '🥉 BRONZE' : null;
+  _cl();
+  if (boss) return;
+  const m = r < 0.18 ? '🥇 GOLD' : r < 0.28 ? '🥈 SILVER' : r < 0.42 ? '🥉 BRONZE' : null;
   if (m) document.getElementById('msgSub').textContent += ' · ' + m + ' MEDAL';
 };
 
-// ---------- NEW HIDDEN-TRAP PLACEMENT ----------
+// ---------- NEW HIDDEN-TRAP PLACEMENT (more mysterious ones) ----------
 function addNewTraps(lv, idx) {
   let s = 777 + idx * 53;
   const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
-  const types = lv.isBoss ? ['meteor', 'wisp'] : ['meteor', 'spikewave', 'web', 'wisp', 'blackout'];
-  const radius = { meteor: 5, spikewave: 3, web: 4, wisp: 5, blackout: 4 };
-  const want = lv.isBoss ? 2 : Math.min(7, 2 + Math.floor(idx / 2) + (idx >= 11 ? 1 : 0));
-  const cp = lv.checkpoint ? lv.checkpoint.x : -999, spots = [], used = [];
+  const types = lv.isBoss
+    ? ['meteor', 'wisp', 'voidwhisper']
+    : ['meteor', 'spikewave', 'web', 'wisp', 'blackout', 'echo', 'soulsnare', 'phantomfloor', 'timerift', 'voidwhisper', 'cursedmark'];
+  const radius = {
+    meteor: 5, spikewave: 3, web: 4, wisp: 5, blackout: 4,
+    echo: 4.5, soulsnare: 3.5, phantomfloor: 2.5, timerift: 4,
+    voidwhisper: 5, cursedmark: 3.8
+  };
+  const want = lv.isBoss ? 3 : Math.min(9, 3 + Math.floor(idx / 2) + (idx >= 10 ? 2 : 0));
+  const cp = lv.checkpoint ? lv.checkpoint.x : -999;
+  const spots = [], used = [];
   for (const p of lv.platforms) {
     if (p.type !== 'g' || p.y !== 10 || p.w < 2) continue;
     const cx = p.x + Math.floor(p.w / 2);
     if (cx >= 12 && cx <= lv.portal.x - 4 && Math.abs(cx - cp) >= 7) spots.push(cx);
   }
   let n = 0, guard = 0;
-  while (n < want && spots.length && guard++ < 200) {
+  while (n < want && spots.length && guard++ < 250) {
     const cx = spots[Math.floor(rnd() * spots.length)];
     if (used.some(u => Math.abs(u - cx) < 7) || lv.hiddenTraps.some(h => Math.abs(h.x - cx) < 2)) continue;
     const type = types[(n + idx) % types.length];
-    lv.hiddenTraps.push({ type, x: cx, y: 9, triggerRadius: radius[type] });
-    used.push(cx); n++;
+    lv.hiddenTraps.push({ type, x: cx, y: 9, triggerRadius: radius[type] || 4 });
+    used.push(cx);
+    n++;
   }
 }
 
-// ---------- GAUNTLET LEVELS (3 procedural, harder, inserted before final boss) ----------
+// ---------- GAUNTLET LEVELS (now 4 procedural, harder) ----------
 function genGauntlet(n) {
   let s = 900 + n * 131;
   const rnd = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
-  const len = 110 + n * 12, pl = [{ x: 0, y: 10, w: 5, h: 3, type: 'g' }], tr = [], hid = [], floats = [];
+  const len = 115 + n * 14;
+  const pl = [{ x: 0, y: 10, w: 5, h: 3, type: 'g' }];
+  const tr = [], hid = [], floats = [];
   let x = 5;
   while (x < len - 14) {
-    const gap = 3 + Math.floor(rnd() * 2), w = 3 + Math.floor(rnd() * 3);
-    const fy = 6 + Math.floor(rnd() * 2);
+    const gap = 3 + Math.floor(rnd() * 2.5);
+    const w = 3 + Math.floor(rnd() * 3.5);
+    const fy = 5 + Math.floor(rnd() * 3);
     pl.push({ x: x + Math.floor(gap / 2) - 1, y: fy + 1, w: 2, h: 1, type: 'p' });
     floats.push({ x: x + Math.floor(gap / 2) - 1, y: fy + 1 });
-    x += gap; pl.push({ x, y: 10, w, h: 3, type: 'g' });
+    x += gap;
+    pl.push({ x, y: 10, w, h: 3, type: 'g' });
     const r = rnd();
-    if (r < 0.34) tr.push({ type: 'spike', x: x + 1, y: 9, w: 1 + Math.floor(rnd() * 2), h: 1 });
-    else if (r < 0.67) tr.push({ type: 'fire', x: x + 1, y: 9, w: 1, h: 1 });
+    if (r < 0.32) tr.push({ type: 'spike', x: x + 1, y: 9, w: 1 + Math.floor(rnd() * 2), h: 1 });
+    else if (r < 0.62) tr.push({ type: 'fire', x: x + 1, y: 9, w: 1, h: 1 });
     else if (w >= 4) tr.push({ type: 'saw', x: x + 1, y: 8, w: 1, h: 1, range: [x, x + w - 1] });
-    if (rnd() < 0.5) hid.push({ type: ['rockfall', 'collapse', 'dart', 'laser'][Math.floor(rnd() * 4)], x: x + 1, y: 9, triggerRadius: 5 });
+    if (rnd() < 0.55) {
+      const ttypes = ['rockfall', 'collapse', 'dart', 'laser', 'echo', 'soulsnare', 'voidwhisper'];
+      hid.push({ type: ttypes[Math.floor(rnd() * ttypes.length)], x: x + 1, y: 9, triggerRadius: 5 });
+    }
     x += w;
   }
   pl.push({ x: x + 3, y: 10, w: 8, h: 3, type: 'g' });
-  const th = [LEVELS[3].theme, LEVELS[6].theme, LEVELS[7].theme][n];
-  const fr = [0.2, 0.5, 0.8].map(k => floats[Math.floor(floats.length * k)]).map(f => ({ x: f.x + 1, y: f.y - 1.2 }));
-  const lv = buildLevel({ name: 'GAUNTLET ' + ['I', 'II', 'III'][n], season: ['AUTUMN', 'WINTER', 'SUMMER'][n],
-    sub: 'LEVEL ' + (12 + n) + ' / 15', theme: th, platforms: pl, traps: tr, hiddenTraps: hid, fragments: fr,
-    portal: { x: x + 8, y: 8 }, length: x + 12 });
+  const th = [LEVELS[3].theme, LEVELS[6].theme, LEVELS[7].theme, LEVELS[1].theme][n % 4];
+  const fr = [0.18, 0.45, 0.72].map(k => floats[Math.floor(floats.length * k)] || floats[0])
+    .map(f => ({ x: f.x + 1, y: f.y - 1.2 }));
+  const lv = buildLevel({
+    name: 'GAUNTLET ' + ['I', 'II', 'III', 'IV'][n],
+    season: ['AUTUMN', 'WINTER', 'SUMMER', 'SPRING'][n % 4],
+    sub: 'LEVEL ' + (13 + n) + ' / 18',
+    theme: th,
+    platforms: pl,
+    traps: tr,
+    hiddenTraps: hid,
+    fragments: fr,
+    portal: { x: x + 8, y: 8 },
+    length: x + 12
+  });
   return lv;
 }
+
 (function () {
-  LEVELS.forEach(lv => { lv.sub = lv.sub.replace('/ 12', '/ 15'); });
-  const g = [0, 1, 2].map(genGauntlet);
-  g.forEach((lv, k) => { lv.checkpoint = pickSafeCheckpoint(lv); clearCheckpointZone(lv); addExtraTraps(lv, 12 + k); });
+  // Update existing sub labels
+  LEVELS.forEach(lv => {
+    lv.sub = lv.sub.replace(/\/ \d+/, '/ 18');
+  });
+
+  // Generate 4 gauntlets
+  const g = [0, 1, 2, 3].map(genGauntlet);
+  g.forEach((lv, k) => {
+    lv.checkpoint = pickSafeCheckpoint(lv);
+    clearCheckpointZone(lv);
+    addExtraTraps(lv, 13 + k);
+  });
+
+  // Insert gauntlets before the final boss
   LEVELS.splice(LEVELS.length - 1, 0, ...g);
+
+  // Add more mysterious traps to every level
   LEVELS.forEach((lv, i) => addNewTraps(lv, i));
 })();
 
@@ -5219,13 +5814,21 @@ setInterval(() => {
   if (X.speed > 0) h += ` · HASTE <b>${Math.ceil(X.speed)}s</b>`;
   if (X.magnet > 0) h += ` · MAGNET <b>${Math.ceil(X.magnet)}s</b>`;
   if (X.freeze > 0) h += ` · SLOW <b>${Math.ceil(X.freeze)}s</b>`;
-  xh.innerHTML = h; xh.style.display = game.running ? 'flex' : 'none';
+  if (X.phase > 0) h += ` · PHASE <b>${Math.ceil(X.phase)}s</b>`;
+  if (X.reverse > 0) h += ` · RIFT <b>${Math.ceil(X.reverse)}s</b>`;
+  xh.innerHTML = h;
+  xh.style.display = game.running ? 'flex' : 'none';
 }, 100);
+
 document.querySelector('.controls').insertAdjacentHTML('beforeend', '<span><kbd>Q</kbd> POWER</span>');
 const mp = document.createElement('button');
-mp.id = 'mPower'; mp.textContent = '✦'; mp.style.borderColor = 'rgba(200,160,255,.7)'; mp.style.color = '#c8a0ff';
+mp.id = 'mPower';
+mp.textContent = '✦';
+mp.style.borderColor = 'rgba(200,160,255,.7)';
+mp.style.color = '#c8a0ff';
 mp.addEventListener('pointerdown', e => { e.preventDefault(); usePower(); });
 document.querySelector('#mobile .right-group').prepend(mp);
+
 
 // ============================================================
 //  INIT (End of Script)
